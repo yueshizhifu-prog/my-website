@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>玥时之肤运营系统</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260703-upload-limit" />
   </head>
   <body>
     <main class="app-shell">
@@ -50,7 +50,9 @@
               <input id="videoInput" type="file" accept="video/*" />
               <strong>导入视频</strong>
               <span id="videoName">拖入视频，或点击选择文件</span>
+              <small>建议 30-45 秒，10MB 内；超过 10MB 请先压缩或剪短</small>
             </label>
+            <div id="uploadWarning" class="upload-warning" hidden></div>
             <div class="mobile-upload-note">上传后自动生成投前判断、优化建议和成品文案</div>
             <div class="mobile-result-preview" aria-label="生成结果预览">
               <article>
@@ -172,7 +174,7 @@
     </main>
 
     <canvas id="captureCanvas" hidden></canvas>
-    <script src="./config.js?v=20260703-aliyun"></script>
-    <script src="./app.js?v=20260703-aliyun"></script>
+    <script src="./config.js?v=20260703-upload-limit"></script>
+    <script src="./app.js?v=20260703-upload-limit"></script>
   </body>
 </html>
