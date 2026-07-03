@@ -297,6 +297,29 @@ textarea {
   line-height: 1.45;
 }
 
+.dropbox small {
+  width: 100%;
+  max-width: 280px;
+  padding: 7px 9px;
+  border: 1px solid rgba(227, 58, 137, 0.22);
+  border-radius: 6px;
+  background: rgba(255, 240, 248, 0.76);
+  color: #7d2c60;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.upload-warning {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid rgba(180, 35, 63, 0.26);
+  border-radius: 7px;
+  background: rgba(255, 232, 239, 0.86);
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .video-preview {
   display: block;
   width: 100%;
