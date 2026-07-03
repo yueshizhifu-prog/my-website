@@ -34,6 +34,10 @@ const elements = {
   reportOutput: document.getElementById("reportOutput"),
 };
 
+const runtimeConfig = {
+  cloudAnalyzeUrl: String(window.YUESHI_CLOUD_ANALYZE_URL || "").trim(),
+};
+
 const state = {
   frames: [],
   videoLoaded: false,
@@ -44,6 +48,18 @@ const state = {
   visualStructure: null,
   lastAnalysis: null,
 };
+
+function isLocalRuntime() {
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+function shouldUseCloudAnalysis() {
+  return !isLocalRuntime();
+}
+
+function getCloudAnalyzeUrl() {
+  return runtimeConfig.cloudAnalyzeUrl;
+}
 
 function syncAppStateClasses() {
   document.body.classList.toggle("has-video", state.videoLoaded);
@@ -75,10 +91,18 @@ function setVideo(file) {
   elements.videoPreview.load();
   elements.videoPreview.addEventListener("loadedmetadata", async () => {
     await captureFrames();
-    autoDescribeVisual();
+    if (!shouldUseCloudAnalysis() && !elements.visualInput.value.trim()) {
+      autoDescribeVisual();
+    } else {
+      renderFrames();
+    }
   }, { once: true });
 
-  transcribeVideo(file);
+  if (shouldUseCloudAnalysis()) {
+    analyzeVideoWithBailian(file);
+  } else {
+    transcribeVideo(file);
+  }
   renderFrames();
 }
 
@@ -183,6 +207,199 @@ function frameMaterialFor(index, total, visual) {
 function shortMaterialName(label) {
   const parts = String(label || "").split(/[—-]/).map((item) => item.trim()).filter(Boolean);
   return parts[1] || parts[0] || "画面素材";
+}
+
+async function analyzeVideoWithBailian(file = state.videoFile) {
+  if (!file || state.transcriptBusy || state.visionBusy) return false;
+  const endpoint = getCloudAnalyzeUrl();
+
+  state.transcriptBusy = true;
+  state.visionBusy = true;
+  setRecognitionBusy("正在调用百炼理解视频");
+  elements.transcriptState.textContent = "正在用 qwen3-omni-flash 识别普通话口播和字幕";
+  elements.visualState.textContent = "正在用 qwen3-omni-flash 分析画面和拍摄结构";
+
+  try {
+    if (!endpoint) {
+      throw new Error("线上阿里云分析接口还没有配置。需要先部署一个后端中转接口。");
+    }
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "X-File-Name": encodeURIComponent(file.name || "video"),
+      },
+      body: file,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "百炼分析失败");
+
+    applyBailianAnalysis(data);
+    elements.transcriptState.textContent = `已识别普通话口播，模型：${data.model || "qwen3-omni-flash"}`;
+    elements.visualState.textContent = "已按视频顺序生成拍摄素材和投前判断";
+    return true;
+  } catch (error) {
+    elements.transcriptState.textContent = `百炼分析未启用：${error.message}`;
+    elements.visualState.textContent = "改用本地识别和画面抽帧逻辑";
+    return false;
+  } finally {
+    state.transcriptBusy = false;
+    state.visionBusy = false;
+    updateRecognitionState();
+  }
+}
+
+function applyBailianAnalysis(data) {
+  const analysis = data.analysis || {};
+  const transcript = normalizeMandarinTranscript(data.transcript || analysis.transcript || "");
+  const visualText = String(data.visualText || "")
+    || (Array.isArray(analysis.visualObservation) ? analysis.visualObservation.join("\n") : "");
+
+  elements.transcriptInput.value = transcript;
+  elements.visualInput.value = visualText;
+  state.visualAuto = true;
+  state.visualStructure = parseVisualStructure(visualText, transcript);
+
+  const result = buildResultFromBailianAnalysis(analysis, transcript, visualText);
+  state.lastAnalysis = result;
+  renderFrames();
+  renderAnalysis(result);
+}
+
+function buildResultFromBailianAnalysis(analysis, transcript, visualText) {
+  const visual = parseVisualStructure(visualText, transcript);
+  const localStructure = inferScriptStructure(transcript, visual);
+  const localIntent = inferMarketingIntent(transcript, visual, localStructure);
+  const localAudience = inferAudience(`${transcript}\n${visualText}\n${localStructure.formula.join(" ")}`);
+  const localMetrics = estimateMetrics(localStructure, localIntent, localAudience, transcript, visual);
+
+  const structure = normalizeRemoteStructure(analysis.scriptStructure, localStructure);
+  const intent = normalizeRemoteIntent(analysis.marketingIntent, localIntent);
+  const audience = normalizeRemoteAudience(analysis.audience, localAudience);
+  const metrics = normalizeRemoteMetrics(analysis.preflight, localMetrics);
+  const verdict = normalizeRemoteVerdict(analysis.preflight, metrics);
+  const risks = normalizeRemoteRisks(analysis.preflight, inferRisks(structure, intent, metrics, transcript, visual));
+  const rewritePlan = normalizeRemoteRewrite(analysis.rewrite, buildRewriteSuggestion(structure, intent, [], metrics, risks, visual));
+
+  return {
+    transcript,
+    visual,
+    structure,
+    intent,
+    audience,
+    metrics,
+    verdict,
+    risks,
+    actions: [],
+    rewritten: rewritePlan.text,
+    rewritePlan,
+    ready: true,
+  };
+}
+
+function normalizeRemoteStructure(rows, fallback) {
+  if (!Array.isArray(rows) || !rows.length) return fallback;
+  const buckets = rows.map((row, index) => ({
+    label: cleanFallback(row && row.label, `结构 ${index + 1}`),
+    copy: cleanFallback(row && row.copy, "模型未返回对应证据"),
+  }));
+  return {
+    ...fallback,
+    formula: buckets.map((row) => row.label),
+    buckets,
+  };
+}
+
+function normalizeRemoteIntent(rows, fallback) {
+  if (!Array.isArray(rows) || !rows.length) return fallback;
+  const result = rows.map((row) => [
+    cleanFallback(row && (row.title || row.label || row.name), "营销维度"),
+    cleanFallback(row && (row.value || row.copy || row.reason), "待确认"),
+  ]);
+  return result.length ? result : fallback;
+}
+
+function normalizeRemoteAudience(rows, fallback) {
+  if (!Array.isArray(rows) || !rows.length) return fallback;
+  return rows.map((row, index) => ({
+    name: cleanFallback(row && row.name, `吸引人群 ${index + 1}`),
+    reason: cleanFallback(row && row.reason, "模型未返回原因"),
+    score: Number(row && row.score) || 0,
+  }));
+}
+
+function normalizeRemoteMetrics(preflight, fallback) {
+  const score = clampScore(preflight && preflight.score, fallback.score);
+  return {
+    ...fallback,
+    score,
+    stage: cleanFallback(preflight && preflight.label, fallback.stage),
+  };
+}
+
+function normalizeRemoteVerdict(preflight, metrics) {
+  const label = cleanFallback(preflight && preflight.label, metrics.score >= 80 ? "建议投放" : metrics.score >= 60 ? "先改再测" : "不建议投放");
+  const text = cleanFallback(preflight && preflight.text, "百炼已根据文案、画面、声音和结构生成投前判断。");
+  return {
+    label,
+    text,
+    className: metrics.score >= 80 ? "good" : metrics.score >= 60 ? "warning" : "danger",
+  };
+}
+
+function normalizeRemoteRisks(preflight, fallback) {
+  const rows = preflight && preflight.risks;
+  if (!Array.isArray(rows) || !rows.length) return fallback;
+  return rows.map((row) => [
+    cleanFallback(row && row.title, "投前风险"),
+    cleanFallback(row && row.detail, "模型未返回风险说明"),
+  ]);
+}
+
+function normalizeRemoteRewrite(rewrite, fallback) {
+  if (!rewrite || typeof rewrite !== "object") return fallback;
+  const cards = Array.isArray(rewrite.issues) && rewrite.issues.length
+    ? rewrite.issues.map((item, index) => ({
+      label: cleanFallback(item && item.label, `问题 ${index + 1}`),
+      title: cleanFallback(item && item.title, "需要优化"),
+      body: cleanFallback(item && item.body, "模型未返回说明"),
+    }))
+    : fallback.cards;
+  const copy = Array.isArray(rewrite.finalCopy) && rewrite.finalCopy.length
+    ? rewrite.finalCopy.map((line) => String(line || "").trim()).filter(Boolean)
+    : fallback.copy;
+  const execution = Array.isArray(rewrite.executionStandard) && rewrite.executionStandard.length
+    ? rewrite.executionStandard.map((item, index) => ({
+      label: cleanFallback(item && item.label, `${index + 1}`),
+      title: cleanFallback(item && item.title, `步骤 ${index + 1}`),
+      body: cleanFallback(item && item.body, copy[index] || "按成品文案执行"),
+    }))
+    : copy.map((line, index) => ({
+      label: `${index + 1}`,
+      title: ["痛点钩子", "项目承接", "过程证明", "团购收口"][index] || `步骤 ${index + 1}`,
+      body: line,
+    }));
+  return {
+    cards,
+    copy,
+    execution,
+    text: [
+      "优化建议：",
+      ...cards.map((card) => `${card.label}. ${card.title}：${card.body}`),
+      "",
+      "成品文案：",
+      ...copy.map((line, index) => `${index + 1}. ${line}`),
+      "",
+      "执行标准：",
+      ...execution.map((item) => `${item.label}. ${item.title}：${item.body}`),
+    ].join("\n"),
+  };
+}
+
+function clampScore(value, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(number)));
 }
 
 async function transcribeVideo(file = state.videoFile) {
