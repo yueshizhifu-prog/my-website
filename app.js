@@ -2,6 +2,7 @@ const elements = {
   videoInput: document.getElementById("videoInput"),
   videoDrop: document.getElementById("videoDrop"),
   videoName: document.getElementById("videoName"),
+  uploadWarning: document.getElementById("uploadWarning"),
   videoState: document.getElementById("videoState"),
   videoPreview: document.getElementById("videoPreview"),
   captureCanvas: document.getElementById("captureCanvas"),
@@ -38,6 +39,12 @@ const runtimeConfig = {
   cloudAnalyzeUrl: String(window.YUESHI_CLOUD_ANALYZE_URL || "").trim(),
 };
 
+const uploadRules = {
+  maxBytes: 10 * 1024 * 1024,
+  maxMb: 10,
+  idealDuration: "30-45 秒",
+};
+
 const state = {
   frames: [],
   videoLoaded: false,
@@ -67,8 +74,42 @@ function syncAppStateClasses() {
   document.body.classList.toggle("is-processing", state.transcriptBusy || state.visionBusy);
 }
 
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes)) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function setUploadWarning(message) {
+  if (!elements.uploadWarning) return;
+  elements.uploadWarning.hidden = !message;
+  elements.uploadWarning.textContent = message || "";
+}
+
+function getUploadValidationMessage(file) {
+  if (!file) return "";
+  if (!file.type.startsWith("video/")) {
+    return "请上传视频文件，支持 mp4、mov 等常见视频格式。";
+  }
+  if (file.size > uploadRules.maxBytes) {
+    return `这个视频是 ${formatFileSize(file.size)}，建议控制在 ${uploadRules.maxMb}MB 内、${uploadRules.idealDuration} 内。请先压缩或剪短后再上传，避免识别时间过长。`;
+  }
+  return "";
+}
+
 function setVideo(file) {
   if (!file) return;
+  const validationMessage = getUploadValidationMessage(file);
+  if (validationMessage) {
+    setUploadWarning(validationMessage);
+    elements.videoName.textContent = `当前文件过大：${formatFileSize(file.size)}`;
+    elements.videoState.textContent = "需压缩";
+    elements.videoState.className = "pill warning";
+    elements.videoInput.value = "";
+    return;
+  }
+
+  setUploadWarning("");
   state.videoLoaded = true;
   state.videoFile = file;
   state.frames = [];
@@ -77,7 +118,7 @@ function setVideo(file) {
   state.lastAnalysis = null;
   syncAppStateClasses();
 
-  elements.videoName.textContent = file.name;
+  elements.videoName.textContent = `${file.name} · ${formatFileSize(file.size)}`;
   elements.videoState.textContent = "已导入";
   elements.videoState.className = "pill good";
   elements.transcriptInput.value = "";
