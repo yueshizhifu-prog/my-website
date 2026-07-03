@@ -40,8 +40,8 @@ const runtimeConfig = {
 };
 
 const uploadRules = {
-  maxBytes: 10 * 1024 * 1024,
-  maxMb: 10,
+  maxBytes: 100 * 1024 * 1024,
+  maxMb: 100,
   idealDuration: "30-45 秒",
 };
 
