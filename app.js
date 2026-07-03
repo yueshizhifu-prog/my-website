@@ -267,12 +267,13 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
+        "Accept": "application/x-ndjson, application/json",
         "Content-Type": "application/octet-stream",
         "X-File-Name": encodeURIComponent(file.name || "video"),
       },
       body: file,
     });
-    const data = await response.json().catch(() => ({}));
+    const data = await readCloudAnalysisResponse(response);
     if (!response.ok) throw new Error(data.error || "百炼分析失败");
 
     applyBailianAnalysis(data);
@@ -287,6 +288,70 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
     state.transcriptBusy = false;
     state.visionBusy = false;
     updateRecognitionState();
+  }
+}
+
+async function readCloudAnalysisResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/x-ndjson") || !response.body) {
+    return response.json().catch(() => ({}));
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalData = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (value) {
+      buffer += decoder.decode(value, { stream: !done });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        const event = parseCloudEventLine(line);
+        if (!event) continue;
+        if (event.type === "error") throw new Error(event.error || "云端分析失败");
+        if (event.type === "result") finalData = event.data || event;
+        if (event.type === "status" || event.type === "heartbeat") applyCloudProgress(event);
+      }
+    }
+    if (done) break;
+  }
+
+  const tail = parseCloudEventLine(buffer);
+  if (tail) {
+    if (tail.type === "error") throw new Error(tail.error || "云端分析失败");
+    if (tail.type === "result") finalData = tail.data || tail;
+    if (tail.type === "status" || tail.type === "heartbeat") applyCloudProgress(tail);
+  }
+
+  if (!finalData) throw new Error("云端分析没有返回结果");
+  return finalData;
+}
+
+function parseCloudEventLine(line) {
+  const text = String(line || "").trim();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function applyCloudProgress(event) {
+  const message = event.message || "视频仍在分析中，请不要关闭页面";
+  setRecognitionBusy(message);
+  if (event.stage === "upload") {
+    elements.transcriptState.textContent = "视频已进入云端临时处理";
+    elements.visualState.textContent = "正在准备画面和声音理解";
+  } else if (event.stage === "model") {
+    elements.transcriptState.textContent = "百炼正在识别口播和字幕";
+    elements.visualState.textContent = "百炼正在分析画面结构";
+  } else {
+    elements.transcriptState.textContent = message;
+    elements.visualState.textContent = "大视频分析会稍慢，系统仍在处理";
   }
 }
 
