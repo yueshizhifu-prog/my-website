@@ -271,8 +271,8 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
     elements.visualState.textContent = "已按视频顺序生成拍摄素材和投前判断";
     return true;
   } catch (error) {
-    elements.transcriptState.textContent = `百炼分析未启用：${error.message}`;
-    elements.visualState.textContent = "改用本地识别和画面抽帧逻辑";
+    elements.transcriptState.textContent = `云端分析失败：${error.message}`;
+    elements.visualState.textContent = "请检查 OSS 上传、云函数任务或百炼模型返回";
     return false;
   } finally {
     state.transcriptBusy = false;
@@ -291,15 +291,24 @@ async function runCloudAnalysis(file, endpoint) {
 }
 
 async function runCloudAnalysisJob(file, endpoint) {
-  const asyncEndpoint = endpoint.replace(/\/api\/analyze-video$/, "/api/analyze-video-async");
-  const response = await fetch(asyncEndpoint, {
+  const upload = await createCloudUpload(file, endpoint);
+  applyCloudProgress({ stage: "upload", message: "正在上传视频到临时存储" });
+  await uploadFileToOss(file, upload);
+  applyCloudProgress({ stage: "upload", message: "视频已上传，正在创建分析任务" });
+
+  const analyzeEndpoint = endpoint.replace(/\/api\/analyze-video$/, "/api/analyze-uploaded-video");
+  const response = await fetch(analyzeEndpoint, {
     method: "POST",
     headers: {
       "Accept": "application/json",
-      "Content-Type": "application/octet-stream",
-      "X-File-Name": encodeURIComponent(file.name || "video"),
+      "Content-Type": "application/json",
     },
-    body: file,
+    body: JSON.stringify({
+      objectKey: upload.objectKey,
+      contentType: upload.contentType,
+      fileName: file.name || "video",
+      size: file.size,
+    }),
   });
 
   if (response.status === 404 || response.status === 405) {
@@ -313,6 +322,48 @@ async function runCloudAnalysisJob(file, endpoint) {
 
   applyCloudProgress({ stage: "upload", message: "视频已提交云端，正在排队分析" });
   return await pollCloudAnalysisJob(endpoint, data.jobId);
+}
+
+async function createCloudUpload(file, endpoint) {
+  const uploadEndpoint = endpoint.replace(/\/api\/analyze-video$/, "/api/create-upload");
+  const response = await fetch(uploadEndpoint, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fileName: file.name || "video",
+      contentType: file.type || "video/mp4",
+      size: file.size,
+    }),
+  });
+
+  if (response.status === 404 || response.status === 405) {
+    const error = new Error("当前云端暂不支持直传模式");
+    error.allowSyncFallback = true;
+    throw error;
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.uploadUrl || !data.objectKey) {
+    throw new Error(data.error || "云端上传地址创建失败");
+  }
+  return data;
+}
+
+async function uploadFileToOss(file, upload) {
+  const response = await fetch(upload.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": upload.contentType || file.type || "video/mp4",
+    },
+    body: file,
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`视频上传临时存储失败：${response.status} ${text.slice(0, 120)}`);
+  }
 }
 
 async function pollCloudAnalysisJob(endpoint, jobId) {
