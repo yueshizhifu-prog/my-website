@@ -264,17 +264,7 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
     if (!endpoint) {
       throw new Error("线上阿里云分析接口还没有配置。需要先部署一个后端中转接口。");
     }
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Accept": "application/x-ndjson, application/json",
-        "Content-Type": "application/octet-stream",
-        "X-File-Name": encodeURIComponent(file.name || "video"),
-      },
-      body: file,
-    });
-    const data = await readCloudAnalysisResponse(response);
-    if (!response.ok) throw new Error(data.error || "百炼分析失败");
+    const data = await runCloudAnalysis(file, endpoint);
 
     applyBailianAnalysis(data);
     elements.transcriptState.textContent = `已识别普通话口播，模型：${data.model || "qwen3-omni-flash"}`;
@@ -289,6 +279,80 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
     state.visionBusy = false;
     updateRecognitionState();
   }
+}
+
+async function runCloudAnalysis(file, endpoint) {
+  try {
+    return await runCloudAnalysisJob(file, endpoint);
+  } catch (error) {
+    if (!error || !error.allowSyncFallback) throw error;
+    return await runCloudAnalysisSync(file, endpoint);
+  }
+}
+
+async function runCloudAnalysisJob(file, endpoint) {
+  const asyncEndpoint = endpoint.replace(/\/api\/analyze-video$/, "/api/analyze-video-async");
+  const response = await fetch(asyncEndpoint, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/octet-stream",
+      "X-File-Name": encodeURIComponent(file.name || "video"),
+    },
+    body: file,
+  });
+
+  if (response.status === 404 || response.status === 405) {
+    const error = new Error("当前云端暂不支持任务模式");
+    error.allowSyncFallback = true;
+    throw error;
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.jobId) throw new Error(data.error || "云端任务创建失败");
+
+  applyCloudProgress({ stage: "upload", message: "视频已提交云端，正在排队分析" });
+  return await pollCloudAnalysisJob(endpoint, data.jobId);
+}
+
+async function pollCloudAnalysisJob(endpoint, jobId) {
+  const statusEndpoint = `${endpoint.replace(/\/api\/analyze-video$/, "/api/analyze-video-job")}?id=${encodeURIComponent(jobId)}`;
+  const startedAt = Date.now();
+  const maxWaitMs = 8 * 60 * 1000;
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    await delay(3000);
+    const response = await fetch(statusEndpoint, {
+      headers: { "Accept": "application/json" },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "云端任务查询失败");
+
+    applyCloudProgress({
+      stage: data.status === "done" ? "done" : "model",
+      message: data.progress || "视频仍在分析中，请不要关闭页面",
+    });
+
+    if (data.status === "done" && data.result) return data.result;
+    if (data.status === "error") throw new Error(data.error || "云端分析失败");
+  }
+
+  throw new Error("云端分析超时，请换更短的视频或稍后重试");
+}
+
+async function runCloudAnalysisSync(file, endpoint) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Accept": "application/x-ndjson, application/json",
+      "Content-Type": "application/octet-stream",
+      "X-File-Name": encodeURIComponent(file.name || "video"),
+    },
+    body: file,
+  });
+  const data = await readCloudAnalysisResponse(response);
+  if (!response.ok) throw new Error(data.error || "百炼分析失败");
+  return data;
 }
 
 async function readCloudAnalysisResponse(response) {
@@ -353,6 +417,10 @@ function applyCloudProgress(event) {
     elements.transcriptState.textContent = message;
     elements.visualState.textContent = "大视频分析会稍慢，系统仍在处理";
   }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function applyBailianAnalysis(data) {
