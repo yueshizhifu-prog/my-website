@@ -505,6 +505,7 @@
       brandName: "玥时之肤",
       maxServices: 2,
       maxRetries: 3,
+      publicApiBaseUrl: "",
       storageKey: "yueshi_review_state_v1",
       categories: [
         {
@@ -543,6 +544,8 @@
     const toast = document.getElementById("toast");
     let isGenerating = false;
     const hasLocalApiProxy = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
+    const publicApiBaseUrl = String(CONFIG.publicApiBaseUrl || "").replace(/\/$/, "");
+    const hasApiProxy = hasLocalApiProxy || Boolean(publicApiBaseUrl);
 
     function escapeHtml(text) {
       return String(text).replace(/[&<>"']/g, char => ({
@@ -675,7 +678,7 @@
       if (isRetry && state.result) resultText.classList.add("is-refreshing");
 
       try {
-        if (hasLocalApiProxy) {
+        if (hasApiProxy) {
           const generated = await requestDeepSeekReview(mode);
           state.result = generated.review;
           state.source = "deepseek";
@@ -707,7 +710,7 @@
     }
 
     async function requestDeepSeekReview(mode) {
-      const response = await fetch("/api/generate-review", {
+      const response = await fetch(getApiUrl("/api/generate-review"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -726,6 +729,10 @@
         throw new Error("DeepSeek response missing review text");
       }
       return payload;
+    }
+
+    function getApiUrl(path) {
+      return hasLocalApiProxy ? path : `${publicApiBaseUrl}${path}`;
     }
 
     function setGenerating(active, isRetry) {
