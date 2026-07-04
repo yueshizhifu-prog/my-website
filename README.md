@@ -16,3 +16,13 @@ thinking: disabled
 ```
 
 API Key 只应保存在本机 `.env` 文件中，不要提交到公开仓库。
+
+## 公网 DeepSeek 版
+
+GitHub Pages 不能保存密钥。公网调用 DeepSeek 时，需要把 `api/generate-review.js` 部署到 Vercel 等 Serverless 平台，并在平台环境变量中配置：
+
+```text
+DEEPSEEK_API_KEY=你的 DeepSeek Key
+DEEPSEEK_MODEL=deepseek-v4-flash
+ALLOWED_ORIGINS=https://yueshizhifu-prog.github.io,http://127.0.0.1:5178,http://localhost:5178
+```
