@@ -42,7 +42,7 @@ const runtimeConfig = {
 const uploadRules = {
   maxBytes: 100 * 1024 * 1024,
   maxMb: 100,
-  idealDuration: "30-45 秒",
+  idealDuration: "15-60 秒",
 };
 
 const state = {
@@ -92,7 +92,7 @@ function getUploadValidationMessage(file) {
     return "请上传视频文件，支持 mp4、mov 等常见视频格式。";
   }
   if (file.size > uploadRules.maxBytes) {
-    return `这个视频是 ${formatFileSize(file.size)}，建议控制在 ${uploadRules.maxMb}MB 内、${uploadRules.idealDuration} 内。请先压缩或剪短后再上传，避免识别时间过长。`;
+    return `这个视频是 ${formatFileSize(file.size)}，建议控制在 ${uploadRules.maxMb}MB 内、${uploadRules.idealDuration} 内。系统优先分析关键画面，不会上传完整原片。`;
   }
   return "";
 }
@@ -119,29 +119,29 @@ function setVideo(file) {
   syncAppStateClasses();
 
   elements.videoName.textContent = `${file.name} · ${formatFileSize(file.size)}`;
-  elements.videoState.textContent = "已导入";
+  elements.videoState.textContent = "本地拆解";
   elements.videoState.className = "pill good";
   elements.transcriptInput.value = "";
   elements.visualInput.value = "";
   renderEmpty();
-  elements.transcriptState.textContent = "正在识别普通话口播和字幕";
-  elements.visualState.textContent = "正在抽取画面拆解并整理拍摄素材";
-  setRecognitionBusy("正在识别视频内容");
+  elements.transcriptState.textContent = "正在读取视频，不上传完整原片";
+  elements.visualState.textContent = "正在本地抽取关键画面";
+  setRecognitionBusy("正在本地拆解视频");
 
   elements.videoPreview.src = URL.createObjectURL(file);
   elements.videoPreview.load();
   elements.videoPreview.addEventListener("loadedmetadata", async () => {
     await captureFrames();
-    if (!shouldUseCloudAnalysis() && !elements.visualInput.value.trim()) {
+    if (shouldUseCloudAnalysis()) {
+      analyzeVideoWithBailian(file);
+    } else if (!elements.visualInput.value.trim()) {
       autoDescribeVisual();
     } else {
       renderFrames();
     }
   }, { once: true });
 
-  if (shouldUseCloudAnalysis()) {
-    analyzeVideoWithBailian(file);
-  } else {
+  if (!shouldUseCloudAnalysis()) {
     transcribeVideo(file);
   }
   renderFrames();
@@ -151,7 +151,8 @@ async function captureFrames() {
   const video = elements.videoPreview;
   if (!video.duration || !Number.isFinite(video.duration)) return;
 
-  const points = makeFramePoints(video.duration, 6);
+  const frameCount = video.duration >= 50 ? 16 : video.duration >= 25 ? 12 : 8;
+  const points = makeFramePoints(video.duration, frameCount);
   const frames = [];
   for (const point of points) {
     try {
@@ -182,11 +183,15 @@ function captureAt(time) {
 
   return new Promise((resolve, reject) => {
     const onSeeked = () => {
-      canvas.width = video.videoWidth || 360;
-      canvas.height = video.videoHeight || 640;
+      const sourceWidth = video.videoWidth || 360;
+      const sourceHeight = video.videoHeight || 640;
+      const maxWidth = 420;
+      const scale = Math.min(1, maxWidth / sourceWidth);
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       cleanup();
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
     };
     const onError = () => {
       cleanup();
@@ -256,9 +261,9 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
 
   state.transcriptBusy = true;
   state.visionBusy = true;
-  setRecognitionBusy("正在调用百炼理解视频");
-  elements.transcriptState.textContent = "正在用 qwen3-omni-flash 识别普通话口播和字幕";
-  elements.visualState.textContent = "正在用 qwen3-omni-flash 分析画面和拍摄结构";
+  setRecognitionBusy("正在上传轻量证据包");
+  elements.transcriptState.textContent = "正在读取画面字幕和已有文案";
+  elements.visualState.textContent = "正在把关键画面交给百炼分析";
 
   try {
     if (!endpoint) {
@@ -283,11 +288,60 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
 
 async function runCloudAnalysis(file, endpoint) {
   try {
-    return await runCloudAnalysisJob(file, endpoint);
+    return await runCloudEvidenceAnalysis(file, endpoint);
   } catch (error) {
-    if (!error || !error.allowSyncFallback) throw error;
-    return await runCloudAnalysisSync(file, endpoint);
+    if (!error || !error.allowOriginalVideoFallback) throw error;
+    return await runCloudAnalysisJob(file, endpoint);
   }
+}
+
+async function runCloudEvidenceAnalysis(file, endpoint) {
+  const evidenceEndpoint = endpoint.replace(/\/api\/analyze-video$/, "/api/analyze-evidence");
+  const payload = buildEvidencePayload(file);
+  applyCloudProgress({
+    stage: "evidence",
+    message: `已提取 ${payload.frames.length} 个关键画面，正在生成投前报告`,
+  });
+
+  const response = await fetch(evidenceEndpoint, {
+    method: "POST",
+    headers: {
+      "Accept": "application/x-ndjson, application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 404 || response.status === 405) {
+    const error = new Error("云函数还没有更新极速证据包接口");
+    error.allowOriginalVideoFallback = true;
+    throw error;
+  }
+
+  const data = await readCloudAnalysisResponse(response);
+  if (!response.ok) throw new Error(data.error || "百炼证据包分析失败");
+  return data;
+}
+
+function buildEvidencePayload(file) {
+  const video = elements.videoPreview;
+  const frames = state.frames.slice(0, 18).map((frame, index) => ({
+    index: index + 1,
+    time: Number(frame.time || 0),
+    image: frame.image,
+  }));
+
+  return {
+    mode: "fast-evidence",
+    fileName: file.name || "video",
+    size: file.size,
+    duration: Number(video.duration || 0),
+    width: Number(video.videoWidth || 0),
+    height: Number(video.videoHeight || 0),
+    transcript: elements.transcriptInput.value.trim(),
+    visualHint: elements.visualInput.value.trim(),
+    frames,
+  };
 }
 
 async function runCloudAnalysisJob(file, endpoint) {
@@ -346,13 +400,19 @@ async function createCloudUpload(file, endpoint) {
   }
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data.uploadUrl || !data.objectKey) {
+  if (!response.ok || !data.objectKey || (!data.uploadUrl && data.strategy !== "multipart")) {
     throw new Error(data.error || "云端上传地址创建失败");
   }
+  data.endpoint = endpoint;
   return data;
 }
 
 async function uploadFileToOss(file, upload) {
+  if (upload.strategy === "multipart") {
+    await uploadFileToOssMultipart(file, upload);
+    return;
+  }
+
   const response = await fetch(upload.uploadUrl, {
     method: "PUT",
     headers: {
@@ -364,6 +424,135 @@ async function uploadFileToOss(file, upload) {
     const text = await response.text().catch(() => "");
     throw new Error(`视频上传临时存储失败：${response.status} ${text.slice(0, 120)}`);
   }
+}
+
+async function uploadFileToOssMultipart(file, upload) {
+  const partSize = Number(upload.partSize || 1024 * 1024);
+  const partCount = Number(upload.partCount || Math.ceil(file.size / partSize));
+  const uploadedParts = [];
+  const concurrency = Math.min(3, partCount);
+  let nextIndex = 0;
+  let completedParts = 0;
+
+  async function uploadWorker() {
+    while (nextIndex < partCount) {
+      const index = nextIndex;
+      nextIndex += 1;
+
+      const partNumber = index + 1;
+      const start = index * partSize;
+      const end = Math.min(file.size, start + partSize);
+      const chunk = file.slice(start, end, "");
+      const part = upload.parts && upload.parts[index] && upload.parts[index].partNumber === partNumber
+        ? upload.parts[index]
+        : await signUploadPart(upload, partNumber);
+
+      applyCloudProgress({
+        stage: "upload",
+        message: `正在上传视频分片 ${partNumber}/${partCount}（已完成 ${completedParts}/${partCount}）`,
+      });
+
+      const eTag = await uploadPartWithRetry(part.uploadUrl, chunk, partNumber);
+      uploadedParts.push({ partNumber, eTag });
+      completedParts += 1;
+
+      applyCloudProgress({
+        stage: "upload",
+        message: `视频上传中 ${completedParts}/${partCount}（${Math.round((completedParts / partCount) * 100)}%）`,
+      });
+    }
+  }
+
+  try {
+    await Promise.all(Array.from({ length: concurrency }, () => uploadWorker()));
+    uploadedParts.sort((a, b) => a.partNumber - b.partNumber);
+    await completeMultipartUpload(upload, uploadedParts);
+  } catch (error) {
+    abortMultipartUpload(upload).catch(() => {});
+    throw error;
+  }
+}
+
+async function uploadPartWithRetry(uploadUrl, chunk, partNumber) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: chunk,
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`${response.status} ${text.slice(0, 120)}`);
+      }
+      const eTag = response.headers.get("ETag") || response.headers.get("etag");
+      if (!eTag) throw new Error("OSS 没有返回分片 ETag");
+      return eTag;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        applyCloudProgress({
+          stage: "upload",
+          message: `第 ${partNumber} 个分片上传中断，正在重试 ${attempt}/2`,
+        });
+        await delay(1200 * attempt);
+      }
+    }
+  }
+  throw new Error(`第 ${partNumber} 个分片上传失败：${lastError ? lastError.message : "网络中断"}`);
+}
+
+async function signUploadPart(upload, partNumber) {
+  const endpoint = upload.endpoint || getCloudAnalyzeUrl();
+  const response = await fetch(endpoint.replace(/\/api\/analyze-video$/, "/api/sign-upload-part"), {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      objectKey: upload.objectKey,
+      uploadId: upload.uploadId,
+      partNumber,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.uploadUrl) throw new Error(data.error || "分片上传地址创建失败");
+  return data;
+}
+
+async function completeMultipartUpload(upload, parts) {
+  const endpoint = upload.endpoint || getCloudAnalyzeUrl();
+  const response = await fetch(endpoint.replace(/\/api\/analyze-video$/, "/api/complete-multipart-upload"), {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      objectKey: upload.objectKey,
+      uploadId: upload.uploadId,
+      parts,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "视频分片合并失败");
+}
+
+async function abortMultipartUpload(upload) {
+  if (!upload || upload.strategy !== "multipart" || !upload.uploadId) return;
+  const endpoint = upload.endpoint || getCloudAnalyzeUrl();
+  await fetch(endpoint.replace(/\/api\/analyze-video$/, "/api/abort-multipart-upload"), {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      objectKey: upload.objectKey,
+      uploadId: upload.uploadId,
+    }),
+  });
 }
 
 async function pollCloudAnalysisJob(endpoint, jobId) {
@@ -458,7 +647,10 @@ function parseCloudEventLine(line) {
 function applyCloudProgress(event) {
   const message = event.message || "视频仍在分析中，请不要关闭页面";
   setRecognitionBusy(message);
-  if (event.stage === "upload") {
+  if (event.stage === "evidence") {
+    elements.transcriptState.textContent = "已完成本地拆解，正在识别字幕/口播线索";
+    elements.visualState.textContent = "正在根据关键画面生成结构和建议";
+  } else if (event.stage === "upload") {
     elements.transcriptState.textContent = "视频已进入云端临时处理";
     elements.visualState.textContent = "正在准备画面和声音理解";
   } else if (event.stage === "model") {
