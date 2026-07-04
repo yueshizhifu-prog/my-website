@@ -16,6 +16,10 @@
     {
       "src": "llm-project-knowledge.json",
       "use": "@vercel/static"
+    },
+    {
+      "src": "site-qr.png",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -30,6 +34,10 @@
     {
       "src": "/llm-project-knowledge.json",
       "dest": "/llm-project-knowledge.json"
+    },
+    {
+      "src": "/site-qr.png",
+      "dest": "/site-qr.png"
     },
     {
       "src": "/(.*)",
