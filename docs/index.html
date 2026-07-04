@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>玥时之肤好评生成助手</title>
+  <style>
+    :root {
+      --ink: #25141b;
+      --muted: #846b75;
+      --soft: #fff7fa;
+      --panel: #fffafc;
+      --line: #ead5df;
+      --teal: #b72868;
+      --teal-deep: #5a1027;
+      --teal-soft: #f8e8f0;
+      --rose: #cf9b69;
+      --rose-soft: #f5e8dc;
+      --clay: #7d3d4f;
+      --shadow: 0 16px 38px rgba(45, 7, 20, .16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      min-height: 100%;
+      background: #2a0715;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        linear-gradient(180deg, rgba(42, 7, 21, .16), rgba(42, 7, 21, .72)),
+        url("assets/brand-bg.png") center top / cover fixed no-repeat;
+      padding: 0 14px 40px;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(100%, 430px);
+      margin: 0 auto;
+      padding: 18px 0 0;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      min-height: 196px;
+      display: flex;
+      align-items: flex-end;
+      background:
+        linear-gradient(180deg, rgba(42, 7, 21, .18), rgba(42, 7, 21, .86)),
+        url("assets/brand-bg.png") center center / cover no-repeat;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, .16);
+    }
+
+    .hero-body {
+      width: 100%;
+      padding: 24px 20px 22px;
+      background: transparent;
+    }
+
+    .eyebrow {
+      color: #efc1d1;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+    }
+
+    h1 {
+      color: #fff7fa;
+      font-size: 24px;
+      line-height: 1.22;
+      font-weight: 750;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: rgba(255, 247, 250, .78);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .card {
+      margin-top: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(219, 231, 232, .84);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(31, 47, 53, .05);
+      padding: 16px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      line-height: 1.35;
+      font-weight: 750;
+      color: var(--ink);
+    }
+
+    .hint {
+      flex: none;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .cat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fffdfd;
+    }
+
+    .cat + .cat {
+      margin-top: 8px;
+    }
+
+    .cat.open {
+      border-color: rgba(47, 127, 122, .42);
+      background: var(--teal-soft);
+    }
+
+    .cat-toggle {
+      width: 100%;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 12px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .cat-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .cat-name::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--teal), var(--rose));
+      flex: none;
+    }
+
+    .cat-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: none;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--teal);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .cat.open .badge.on {
+      display: inline-block;
+    }
+
+    .arrow {
+      color: var(--teal);
+      transition: transform .2s;
+    }
+
+    .cat.open .arrow {
+      transform: rotate(180deg);
+    }
+
+    .cat-body {
+      display: none;
+      padding: 0 10px 12px;
+    }
+
+    .cat.open .cat-body {
+      display: block;
+    }
+
+    .service-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .service {
+      min-height: 48px;
+      padding: 11px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #415156;
+      font-size: 13px;
+      line-height: 1.32;
+      text-align: left;
+      transition: border-color .16s, background .16s, color .16s, transform .16s;
+    }
+
+    .service:active {
+      transform: scale(.98);
+    }
+
+    .service.selected {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+      color: var(--teal-deep);
+      font-weight: 750;
+    }
+
+    .selected-row {
+      display: none;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .selected-row.on {
+      display: flex;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--rose-soft);
+      color: #8b4654;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .generate {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 12px;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--teal), var(--rose));
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 12px 28px rgba(47, 127, 122, .22);
+    }
+
+    .generate:disabled,
+    .copy:disabled,
+    .retry:disabled {
+      opacity: .45;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .result {
+      display: none;
+    }
+
+    .result.on {
+      display: block;
+    }
+
+    .result-text {
+      min-height: 154px;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.86), rgba(245,249,250,.95));
+      color: #24363b;
+      font-size: 15px;
+      line-height: 1.82;
+      white-space: pre-wrap;
+      word-break: break-word;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .result-text.is-refreshing {
+      opacity: .52;
+      transform: translateY(2px);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .copy,
+    .retry {
+      position: relative;
+      min-height: 44px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      overflow: hidden;
+    }
+
+    .copy {
+      color: #fff;
+      background: var(--teal);
+    }
+
+    .copy.pulse {
+      animation: pulse 1.2s ease-in-out 2;
+    }
+
+    .retry {
+      color: var(--teal-deep);
+      background: var(--teal-soft);
+    }
+
+    .generate.is-loading,
+    .retry.is-loading {
+      pointer-events: none;
+    }
+
+    .generate.is-loading::before,
+    .retry.is-loading::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 8px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 999px;
+      vertical-align: -2px;
+      animation: spin .72s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: none; }
+      50% { transform: scale(1.025); box-shadow: 0 10px 26px rgba(47, 127, 122, .26); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .platforms {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .platform {
+      min-height: 42px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .platform.meituan {
+      background: #f4c400;
+      color: #3a2a00;
+    }
+
+    .platform.dianping {
+      background: #ef7f34;
+    }
+
+    .platform.douyin {
+      background: #202328;
+    }
+
+    .notes {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 250, 252, .82);
+      border: 1px solid rgba(219, 231, 232, .82);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(16px);
+      z-index: 20;
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(42, 7, 21, .92);
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s, transform .22s;
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (min-width: 760px) {
+      body {
+        padding-top: 28px;
+      }
+
+      .app {
+        padding-bottom: 28px;
+      }
+
+      .hero {
+        min-height: 212px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero" aria-labelledby="pageTitle">
+      <div class="hero-body">
+        <div class="eyebrow">YUE SHI SKIN</div>
+        <h1 id="pageTitle">玥时之肤好评生成助手</h1>
+        <p class="subtitle">选好今天体验的项目，生成一段更像真实顾客口吻的评价文案。</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="serviceTitle">
+      <div class="card-head">
+        <div class="card-title" id="serviceTitle">今天体验了哪些项目？</div>
+        <div class="hint">最多选 2 个</div>
+      </div>
+      <div id="serviceList"></div>
+      <div class="selected-row" id="selectedRow"></div>
+    </section>
+
+    <button class="generate" id="generateBtn" type="button" disabled>生成我的好评</button>
+
+    <section class="card result" id="resultCard" aria-labelledby="resultTitle">
+      <div class="card-head">
+        <div class="card-title" id="resultTitle">专属好评文案</div>
+        <div class="hint" id="resultHint">本地预览版</div>
+      </div>
+      <div class="result-text" id="resultText"></div>
+      <div class="actions">
+        <button class="copy" id="copyBtn" type="button">复制文案</button>
+        <button class="retry" id="retryBtn" type="button">换一篇</button>
+      </div>
+      <div class="platforms" id="platforms"></div>
+      <div class="notes" id="sourceNote">当前版本已预留 DeepSeek 接口；未配置 API Key 时自动使用本地模板兜底。</div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const CONFIG = {
+      brandName: "玥时之肤",
+      maxServices: 2,
+      maxRetries: 3,
+      storageKey: "yueshi_review_state_v1",
+      categories: [
+        {
+          name: "维养护肤",
+          items: ["基础清洁｜T区小气泡", "洁润净肤七步曲｜清洁毛孔+按摩任选", "润衡九步曲｜补水锁水", "双抗十步曲｜抗糖抗氧"]
+        },
+        {
+          name: "交联水光｜含肩颈+头疗",
+          items: ["春水光｜强韧抗敏", "夏水光｜净痘控油", "秋水光｜提亮补水", "冬水光｜紧致提拉"]
+        }
+      ],
+      platforms: [
+        { key: "meituan", label: "美团", url: "" },
+        { key: "dianping", label: "点评", url: "" },
+        { key: "douyin", label: "抖音", url: "" }
+      ]
+    };
+
+    const state = {
+      selected: [],
+      result: "",
+      source: "local",
+      retryUsed: 0
+    };
+
+    const serviceList = document.getElementById("serviceList");
+    const selectedRow = document.getElementById("selectedRow");
+    const generateBtn = document.getElementById("generateBtn");
+    const resultCard = document.getElementById("resultCard");
+    const resultText = document.getElementById("resultText");
+    const resultHint = document.getElementById("resultHint");
+    const copyBtn = document.getElementById("copyBtn");
+    const retryBtn = document.getElementById("retryBtn");
+    const platforms = document.getElementById("platforms");
+    const sourceNote = document.getElementById("sourceNote");
+    const toast = document.getElementById("toast");
+    let isGenerating = false;
+    const hasLocalApiProxy = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function init() {
+      restoreState();
+      renderServices();
+      renderPlatforms();
+      updateUI();
+      bindEvents();
+    }
+
+    function bindEvents() {
+      serviceList.addEventListener("click", event => {
+        const catBtn = event.target.closest("[data-cat-toggle]");
+        if (catBtn) {
+          const index = Number(catBtn.dataset.catToggle);
+          document.querySelector(`[data-cat="${index}"]`).classList.toggle("open");
+          return;
+        }
+
+        const serviceBtn = event.target.closest("[data-service]");
+        if (!serviceBtn) return;
+        toggleService(serviceBtn.dataset.service);
+      });
+
+      generateBtn.addEventListener("click", () => generateReview("generate"));
+      retryBtn.addEventListener("click", () => generateReview("retry"));
+      copyBtn.addEventListener("click", () => copyReview("文案已复制"));
+
+      platforms.addEventListener("click", event => {
+        const btn = event.target.closest("[data-platform]");
+        if (!btn) return;
+        const platform = CONFIG.platforms.find(p => p.key === btn.dataset.platform);
+        copyReview(`文案已复制，去${platform.label}粘贴即可`);
+        if (platform.url) window.open(platform.url, "_blank", "noopener");
+      });
+    }
+
+    function renderServices() {
+      serviceList.innerHTML = CONFIG.categories.map((cat, catIndex) => {
+        const items = cat.items.map(service => `
+          <button class="service" type="button" data-service="${escapeHtml(service)}">${escapeHtml(service)}</button>
+        `).join("");
+        return `
+          <div class="cat ${catIndex === 0 ? "open" : ""}" data-cat="${catIndex}">
+            <button class="cat-toggle" type="button" data-cat-toggle="${catIndex}">
+              <span class="cat-name">${escapeHtml(cat.name)}</span>
+              <span class="cat-meta">
+                <span class="badge" data-badge="${catIndex}"></span>
+                <span>${cat.items.length}项</span>
+                <span class="arrow">⌄</span>
+              </span>
+            </button>
+            <div class="cat-body">
+              <div class="service-grid">${items}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPlatforms() {
+      platforms.innerHTML = CONFIG.platforms.map(platform => `
+        <button class="platform ${platform.key}" type="button" data-platform="${platform.key}">${escapeHtml(platform.label)}</button>
+      `).join("");
+    }
+
+    function toggleService(service) {
+      const exists = state.selected.includes(service);
+      if (exists) {
+        state.selected = state.selected.filter(item => item !== service);
+      } else {
+        if (state.selected.length >= CONFIG.maxServices) {
+          showToast(`最多选 ${CONFIG.maxServices} 个项目`);
+          return;
+        }
+        state.selected.push(service);
+      }
+      saveState();
+      updateUI();
+    }
+
+    function updateUI() {
+      document.querySelectorAll("[data-service]").forEach(btn => {
+        btn.classList.toggle("selected", state.selected.includes(btn.dataset.service));
+      });
+
+      CONFIG.categories.forEach((cat, index) => {
+        const selectedCount = cat.items.filter(item => state.selected.includes(item)).length;
+        const badge = document.querySelector(`[data-badge="${index}"]`);
+        if (!badge) return;
+        badge.classList.toggle("on", selectedCount > 0);
+        badge.textContent = selectedCount ? `已选${selectedCount}` : "";
+        if (selectedCount) document.querySelector(`[data-cat="${index}"]`).classList.add("open");
+      });
+
+      generateBtn.disabled = state.selected.length === 0;
+      selectedRow.classList.toggle("on", state.selected.length > 0);
+      selectedRow.innerHTML = state.selected.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join("");
+      updateRetryButton(false);
+
+      if (state.result) {
+        resultText.textContent = state.result;
+        resultHint.textContent = state.source === "deepseek" ? "DeepSeek生成" : "本地预览版";
+        sourceNote.textContent = getSourceNote();
+        resultCard.classList.add("on");
+      }
+    }
+
+    async function generateReview(mode = "generate") {
+      if (!state.selected.length || isGenerating) return;
+
+      const isRetry = mode === "retry";
+      if (isRetry && state.retryUsed >= CONFIG.maxRetries) {
+        showToast("本次最多换 3 篇，刷新后可重新生成");
+        updateRetryButton(false);
+        return;
+      }
+      if (isRetry) state.retryUsed += 1;
+
+      setGenerating(true, isRetry);
+      if (isRetry && state.result) resultText.classList.add("is-refreshing");
+
+      try {
+        if (hasLocalApiProxy) {
+          const generated = await requestDeepSeekReview(mode);
+          state.result = generated.review;
+          state.source = "deepseek";
+          showToast(isRetry ? "DeepSeek已换一篇" : "DeepSeek已生成");
+        } else {
+          await wait(isRetry ? 520 : 360);
+          state.result = buildReview();
+          state.source = "static";
+          showToast(isRetry ? "已换一篇" : "已生成");
+        }
+        saveState();
+        updateUI();
+      } catch (error) {
+        console.warn("DeepSeek review generation failed, using local template.", error);
+        state.result = buildReview();
+        state.source = "fallback";
+        saveState();
+        updateUI();
+        showToast("DeepSeek未接通，已用本地模板");
+      } finally {
+        setGenerating(false, isRetry);
+        resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        pulseCopyButton();
+      }
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => window.setTimeout(resolve, ms));
+    }
+
+    async function requestDeepSeekReview(mode) {
+      const response = await fetch("/api/generate-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandName: CONFIG.brandName,
+          selected: state.selected,
+          previousReview: mode === "retry" ? state.result : "",
+          mode
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.message || "DeepSeek API unavailable");
+      }
+      if (!payload.review || typeof payload.review !== "string") {
+        throw new Error("DeepSeek response missing review text");
+      }
+      return payload;
+    }
+
+    function setGenerating(active, isRetry) {
+      isGenerating = active;
+      generateBtn.disabled = active || state.selected.length === 0;
+      retryBtn.disabled = active || getRetryRemaining() <= 0;
+      copyBtn.disabled = active;
+
+      generateBtn.classList.toggle("is-loading", active && !isRetry);
+      retryBtn.classList.toggle("is-loading", active && isRetry);
+      resultText.classList.toggle("is-refreshing", active && isRetry && Boolean(state.result));
+
+      generateBtn.textContent = active && !isRetry ? "生成中..." : "生成我的好评";
+      updateRetryButton(active && isRetry);
+    }
+
+    function getRetryRemaining() {
+      return Math.max(0, CONFIG.maxRetries - state.retryUsed);
+    }
+
+    function updateRetryButton(isLoading) {
+      if (isLoading) {
+        retryBtn.textContent = `换一篇中...`;
+        return;
+      }
+      const remaining = getRetryRemaining();
+      retryBtn.textContent = remaining > 0 ? `换一篇（剩${remaining}）` : "换一篇已用完";
+      retryBtn.disabled = isGenerating || remaining <= 0;
+      retryBtn.title = remaining > 0 ? `本次还可以换 ${remaining} 篇` : "本次最多换 3 篇，刷新后可重新生成";
+    }
+
+    function getSourceNote() {
+      if (state.source === "deepseek") return "文案已由 DeepSeek API 根据已选项目知识生成。";
+      if (state.source === "static") return "当前为公开静态版，文案由页面内模板生成；DeepSeek 真接口只在本机本地服务中调用。";
+      if (state.source === "fallback") return "DeepSeek 暂未返回可用文案，可能是余额不足、网络异常或接口限制，已自动使用本地模板兜底。";
+      return "当前使用本地模板兜底；配置 DeepSeek API Key 后会自动调用大模型。";
+    }
+
+    function buildReview() {
+      const services = state.selected;
+      const serviceText = joinServices(services);
+      const first = services[0];
+      const last = services[services.length - 1];
+      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+      const emoji = pick(["😊", "✨", "👍", "🌿"]);
+
+      const details = {
+        "基础清洁｜T区小气泡": "主要做T区、鼻翼和下巴的小气泡清洁，吸走多余油脂和脏东西，做完脸上清爽很多，也没有明显紧绷",
+        "洁润净肤七步曲｜清洁毛孔+按摩任选": "清洁过程比较细，鼻翼和下巴的油脂感被带走，做完脸摸起来干净不少，还可以在肩颈和头疗里选一个放松",
+        "润衡九步曲｜补水锁水": "补水和锁水一起做，做完脸不紧绷，皮肤摸起来软软的，妆前状态也更服帖",
+        "双抗十步曲｜抗糖抗氧": "更偏抗糖抗氧和提亮，做完脸色没那么暗，整个人看起来精神一点",
+        "春水光｜强韧抗敏": "主打敏感期舒缓和屏障修护，过程温和，做完泛红感轻一些，另外还搭配了肩颈和头疗放松",
+        "夏水光｜净痘控油": "更适合出油、痘痘和痘印暗沉的状态，做完T区清爽不少，痘痘位置也舒服一些，还加了肩颈和头疗",
+        "秋水光｜提亮补水": "主打提亮和亮白观感，做完脸看起来更透亮，暗沉感轻了一点，肩颈和头疗也一起做得很放松",
+        "冬水光｜紧致提拉": "主打紧致提拉和滋养，做完皮肤细腻度好一些，轮廓看起来更精神，也搭配肩颈和头疗按摩"
+      };
+
+      return `${pick(["朋友推荐来的玥时之肤，本来只是想试一次看看。", "最近皮肤状态一般，刚好今天有空就约了玥时之肤。", "路过附近看到评价还可以，临时进来体验了一下。"])}
+
+这次选了${serviceText}。${sentence(details[first] || "过程挺舒服的")}${services.length > 1 ? sentence(details[last] || "搭配下来比单做一个项目更完整") : "做完之后能感觉皮肤轻松了一些。"}
+
+店里环境干净，护理师说话也比较舒服，没有一直推项目，这点还挺加分${emoji}。效果不是夸张那种，但做完皮肤确实更透、更平稳，整体体验对得起价格。`;
+    }
+
+    function sentence(text) {
+      const value = String(text).trim();
+      return /[。！？.!?]$/.test(value) ? value : `${value}。`;
+    }
+
+    function joinServices(items) {
+      if (items.length === 1) return items[0];
+      if (items.length === 2) return `${items[0]}和${items[1]}`;
+      return `${items[0]}、${items[1]}和${items[2]}`;
+    }
+
+    function pulseCopyButton() {
+      copyBtn.classList.remove("pulse");
+      void copyBtn.offsetWidth;
+      copyBtn.classList.add("pulse");
+      window.setTimeout(() => copyBtn.classList.remove("pulse"), 2600);
+    }
+
+    async function copyReview(message) {
+      const text = resultText.textContent.trim();
+      if (!text) {
+        showToast("先生成文案");
+        return;
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(message);
+          return;
+        } catch (e) {}
+      }
+
+      if (copySync(text)) {
+        showToast(message);
+        return;
+      }
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast(message))
+          .catch(() => showToast("请长按文案手动复制"));
+      } else {
+        showToast("请长按文案手动复制");
+      }
+    }
+
+    function copySync(text) {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.setAttribute("readonly", "");
+      el.style.cssText = "position:fixed;top:0;left:0;width:1em;height:1em;font-size:16px;opacity:0;pointer-events:none;";
+      document.body.appendChild(el);
+      let ok = false;
+      try {
+        const prev = document.activeElement;
+        el.focus();
+        el.setSelectionRange(0, text.length);
+        ok = document.execCommand("copy");
+        if (prev && prev.focus) prev.focus();
+      } catch (e) {}
+      document.body.removeChild(el);
+      return ok;
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(CONFIG.storageKey, JSON.stringify({
+          selected: state.selected,
+          result: state.result,
+          source: state.source,
+          ts: Date.now()
+        }));
+      } catch (e) {}
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(CONFIG.storageKey);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved.ts || Date.now() - saved.ts > 24 * 60 * 60 * 1000) return;
+        const validServices = new Set(CONFIG.categories.flatMap(cat => cat.items));
+        const serviceAliases = new Map([
+          ["春水光｜抗敏感修护", "春水光｜强韧抗敏"],
+          ["夏水光｜祛痘消痘印", "夏水光｜净痘控油"],
+          ["秋水光｜提亮亮白", "秋水光｜提亮补水"]
+        ]);
+        const savedSelected = Array.isArray(saved.selected) ? saved.selected : [];
+        const normalizedSelected = savedSelected.map(service => serviceAliases.get(service) || service);
+        state.selected = normalizedSelected
+          .filter(service => validServices.has(service))
+          .slice(0, CONFIG.maxServices);
+        const selectionUnchanged = normalizedSelected.every((service, index) => service === savedSelected[index]);
+        state.result = state.selected.length === savedSelected.length && selectionUnchanged ? (saved.result || "") : "";
+        state.source = ["deepseek", "fallback", "static"].includes(saved.source) && state.result ? saved.source : "local";
+      } catch (e) {}
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2300);
+    }
+
+    init();
+  </script>
+</body>
+</html>
