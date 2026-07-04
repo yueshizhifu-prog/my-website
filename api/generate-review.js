@@ -1,5 +1,6 @@
-const fs = require("node:fs/promises");
-const path = require("node:path");
+const fs = require("fs").promises;
+const https = require("https");
+const path = require("path");
 
 const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
 const DEFAULT_MODEL = "deepseek-v4-flash";
@@ -38,13 +39,7 @@ module.exports = async function handler(req, res) {
     if (selected.length > 2) return res.status(400).json({ message: "最多选择 2 个项目" });
 
     const knowledge = await loadProjectKnowledge(selected);
-    const deepSeekResponse = await fetch(DEEPSEEK_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
+    const deepSeekPayload = {
         model,
         messages: buildMessages(body.brandName || "玥时之肤", knowledge, body.mode, body.previousReview),
         thinking: { type: "disabled" },
@@ -52,19 +47,16 @@ module.exports = async function handler(req, res) {
         temperature: 0.86,
         max_tokens: 440,
         stream: false
-      })
+    };
+
+    const deepSeekResult = await postJson(DEEPSEEK_API_URL, deepSeekPayload, {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
     });
 
-    const responseText = await deepSeekResponse.text();
-    let responseJson = {};
-    try {
-      responseJson = JSON.parse(responseText);
-    } catch (error) {
-      responseJson = { raw: responseText };
-    }
-
-    if (!deepSeekResponse.ok) {
-      return res.status(deepSeekResponse.status).json({
+    const responseJson = deepSeekResult.data || {};
+    if (deepSeekResult.statusCode < 200 || deepSeekResult.statusCode >= 300) {
+      return res.status(deepSeekResult.statusCode).json({
         code: "deepseek_api_error",
         message: responseJson?.error?.message || "DeepSeek API 请求失败",
         detail: responseJson?.error?.type || responseJson?.code || null
@@ -99,6 +91,44 @@ function setCors(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
+}
+
+function postJson(url, payload, headers = {}) {
+  const body = JSON.stringify(payload);
+  const target = new URL(url);
+  return new Promise((resolve, reject) => {
+    const request = https.request({
+      hostname: target.hostname,
+      path: `${target.pathname}${target.search}`,
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Length": Buffer.byteLength(body)
+      }
+    }, response => {
+      let text = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => {
+        text += chunk;
+      });
+      response.on("end", () => {
+        let data = {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (error) {
+          data = { raw: text };
+        }
+        resolve({ statusCode: response.statusCode || 500, data });
+      });
+    });
+
+    request.on("error", reject);
+    request.setTimeout(15000, () => {
+      request.destroy(new Error("DeepSeek request timeout"));
+    });
+    request.write(body);
+    request.end();
+  });
 }
 
 function isAllowedOrigin(req) {
