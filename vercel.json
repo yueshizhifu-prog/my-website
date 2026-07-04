@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/generate-review.js": {
+      "maxDuration": 15
+    }
+  }
+}
