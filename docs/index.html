@@ -486,7 +486,7 @@
     <section class="card result" id="resultCard" aria-labelledby="resultTitle">
       <div class="card-head">
         <div class="card-title" id="resultTitle">专属好评文案</div>
-        <div class="hint" id="resultHint">本地预览版</div>
+        <div class="hint" id="resultHint">DeepSeek生成</div>
       </div>
       <div class="result-text" id="resultText"></div>
       <div class="actions">
@@ -494,7 +494,7 @@
         <button class="retry" id="retryBtn" type="button">换一篇</button>
       </div>
       <div class="platforms" id="platforms"></div>
-      <div class="notes" id="sourceNote">当前版本已预留 DeepSeek 接口；未配置 API Key 时自动使用本地模板兜底。</div>
+      <div class="notes" id="sourceNote">专属文案只通过 DeepSeek API 实时生成；接口不可用时会直接生成失败。</div>
     </section>
   </main>
 
@@ -598,7 +598,7 @@
           <button class="service" type="button" data-service="${escapeHtml(service)}">${escapeHtml(service)}</button>
         `).join("");
         return `
-          <div class="cat ${catIndex === 0 ? "open" : ""}" data-cat="${catIndex}">
+          <div class="cat open" data-cat="${catIndex}">
             <button class="cat-toggle" type="button" data-cat-toggle="${catIndex}">
               <span class="cat-name">${escapeHtml(cat.name)}</span>
               <span class="cat-meta">
@@ -632,6 +632,9 @@
         }
         state.selected.push(service);
       }
+      state.result = "";
+      state.source = "local";
+      state.retryUsed = 0;
       saveState();
       updateUI();
     }
@@ -657,9 +660,12 @@
 
       if (state.result) {
         resultText.textContent = state.result;
-        resultHint.textContent = state.source === "deepseek" ? "DeepSeek生成" : "本地预览版";
+        resultHint.textContent = "DeepSeek生成";
         sourceNote.textContent = getSourceNote();
         resultCard.classList.add("on");
+      } else {
+        resultText.textContent = "";
+        resultCard.classList.remove("on");
       }
     }
 
@@ -684,29 +690,23 @@
           state.source = "deepseek";
           showToast(isRetry ? "DeepSeek已换一篇" : "DeepSeek已生成");
         } else {
-          await wait(isRetry ? 520 : 360);
-          state.result = buildReview();
-          state.source = "static";
-          showToast(isRetry ? "已换一篇" : "已生成");
+          throw new Error("DeepSeek API unavailable");
         }
         saveState();
         updateUI();
       } catch (error) {
-        console.warn("DeepSeek review generation failed, using local template.", error);
-        state.result = buildReview();
-        state.source = "fallback";
+        console.warn("DeepSeek review generation failed.", error);
+        state.source = "error";
         saveState();
         updateUI();
-        showToast("DeepSeek未接通，已用本地模板");
+        showToast("DeepSeek生成失败，请稍后再试");
       } finally {
         setGenerating(false, isRetry);
-        resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        pulseCopyButton();
+        if (state.result) {
+          resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          pulseCopyButton();
+        }
       }
-    }
-
-    function wait(ms) {
-      return new Promise(resolve => window.setTimeout(resolve, ms));
     }
 
     async function requestDeepSeekReview(mode) {
@@ -766,46 +766,7 @@
 
     function getSourceNote() {
       if (state.source === "deepseek") return "文案已由 DeepSeek API 根据已选项目知识生成。";
-      if (state.source === "static") return "当前为公开静态版，文案由页面内模板生成；DeepSeek 真接口只在本机本地服务中调用。";
-      if (state.source === "fallback") return "DeepSeek 暂未返回可用文案，可能是余额不足、网络异常或接口限制，已自动使用本地模板兜底。";
-      return "当前使用本地模板兜底；配置 DeepSeek API Key 后会自动调用大模型。";
-    }
-
-    function buildReview() {
-      const services = state.selected;
-      const serviceText = joinServices(services);
-      const first = services[0];
-      const last = services[services.length - 1];
-      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-      const emoji = pick(["😊", "✨", "👍", "🌿"]);
-
-      const details = {
-        "基础清洁｜T区小气泡": "主要做T区、鼻翼和下巴的小气泡清洁，吸走多余油脂和脏东西，做完脸上清爽很多，也没有明显紧绷",
-        "洁润净肤七步曲｜清洁毛孔+按摩任选": "清洁过程比较细，鼻翼和下巴的油脂感被带走，做完脸摸起来干净不少，还可以在肩颈和头疗里选一个放松",
-        "润衡九步曲｜补水锁水": "补水和锁水一起做，做完脸不紧绷，皮肤摸起来软软的，妆前状态也更服帖",
-        "双抗十步曲｜抗糖抗氧": "更偏抗糖抗氧和提亮，做完脸色没那么暗，整个人看起来精神一点",
-        "春水光｜强韧抗敏": "主打敏感期舒缓和屏障修护，过程温和，做完泛红感轻一些，另外还搭配了肩颈和头疗放松",
-        "夏水光｜净痘控油": "更适合出油、痘痘和痘印暗沉的状态，做完T区清爽不少，痘痘位置也舒服一些，还加了肩颈和头疗",
-        "秋水光｜提亮补水": "主打提亮和亮白观感，做完脸看起来更透亮，暗沉感轻了一点，肩颈和头疗也一起做得很放松",
-        "冬水光｜紧致提拉": "主打紧致提拉和滋养，做完皮肤细腻度好一些，轮廓看起来更精神，也搭配肩颈和头疗按摩"
-      };
-
-      return `${pick(["朋友推荐来的玥时之肤，本来只是想试一次看看。", "最近皮肤状态一般，刚好今天有空就约了玥时之肤。", "路过附近看到评价还可以，临时进来体验了一下。"])}
-
-这次选了${serviceText}。${sentence(details[first] || "过程挺舒服的")}${services.length > 1 ? sentence(details[last] || "搭配下来比单做一个项目更完整") : "做完之后能感觉皮肤轻松了一些。"}
-
-店里环境干净，护理师说话也比较舒服，没有一直推项目，这点还挺加分${emoji}。效果不是夸张那种，但做完皮肤确实更透、更平稳，整体体验对得起价格。`;
-    }
-
-    function sentence(text) {
-      const value = String(text).trim();
-      return /[。！？.!?]$/.test(value) ? value : `${value}。`;
-    }
-
-    function joinServices(items) {
-      if (items.length === 1) return items[0];
-      if (items.length === 2) return `${items[0]}和${items[1]}`;
-      return `${items[0]}、${items[1]}和${items[2]}`;
+      return "专属文案只通过 DeepSeek API 实时生成；接口不可用时会直接生成失败。";
     }
 
     function pulseCopyButton() {
@@ -892,7 +853,8 @@
           .slice(0, CONFIG.maxServices);
         const selectionUnchanged = normalizedSelected.every((service, index) => service === savedSelected[index]);
         state.result = state.selected.length === savedSelected.length && selectionUnchanged ? (saved.result || "") : "";
-        state.source = ["deepseek", "fallback", "static"].includes(saved.source) && state.result ? saved.source : "local";
+        state.source = saved.source === "deepseek" && state.result ? saved.source : "local";
+        if (state.source !== "deepseek") state.result = "";
       } catch (e) {}
     }
 
