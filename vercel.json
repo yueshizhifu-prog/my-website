@@ -1,7 +1,39 @@
 {
-  "functions": {
-    "api/generate-review.js": {
-      "maxDuration": 15
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/generate-review.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "llm-project-knowledge.json",
+      "use": "@vercel/static"
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/generate-review",
+      "dest": "/api/generate-review.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/llm-project-knowledge.json",
+      "dest": "/llm-project-knowledge.json"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }
