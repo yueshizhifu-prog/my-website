@@ -7,6 +7,7 @@ const DEFAULT_MODEL = "deepseek-v4-flash";
 const MAX_BODY_SIZE = 1024 * 1024;
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://yueshizhifu-prog.github.io",
+  "https://my-website-beige-eta.vercel.app",
   "http://127.0.0.1:5178",
   "http://localhost:5178"
 ];
@@ -83,8 +84,7 @@ module.exports = async function handler(req, res) {
 
 function setCors(req, res) {
   const origin = req.headers.origin;
-  const allowed = allowedOrigins();
-  if (origin && allowed.includes(origin)) {
+  if (origin && isAllowedOrigin(req)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
@@ -134,7 +134,19 @@ function postJson(url, payload, headers = {}) {
 function isAllowedOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
-  return allowedOrigins().includes(origin);
+  if (allowedOrigins().includes(origin)) return true;
+  return isSameOriginRequest(req, origin);
+}
+
+function isSameOriginRequest(req, origin) {
+  try {
+    const originHost = new URL(origin).host;
+    const forwardedHost = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
+    const requestHost = forwardedHost || String(req.headers.host || "").trim();
+    return Boolean(requestHost) && originHost === requestHost;
+  } catch (error) {
+    return false;
+  }
 }
 
 function allowedOrigins() {
