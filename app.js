@@ -287,12 +287,7 @@ async function analyzeVideoWithBailian(file = state.videoFile) {
 }
 
 async function runCloudAnalysis(file, endpoint) {
-  try {
-    return await runCloudEvidenceAnalysis(file, endpoint);
-  } catch (error) {
-    if (!error || !error.allowOriginalVideoFallback) throw error;
-    return await runCloudAnalysisJob(file, endpoint);
-  }
+  return await runCloudEvidenceAnalysis(file, endpoint);
 }
 
 async function runCloudEvidenceAnalysis(file, endpoint) {
@@ -313,9 +308,7 @@ async function runCloudEvidenceAnalysis(file, endpoint) {
   });
 
   if (response.status === 404 || response.status === 405) {
-    const error = new Error("云函数还没有更新极速证据包接口");
-    error.allowOriginalVideoFallback = true;
-    throw error;
+    throw new Error("云函数还没有更新极速证据包接口，请先上传最新云函数包");
   }
 
   const data = await readCloudAnalysisResponse(response);
