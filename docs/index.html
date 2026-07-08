@@ -521,6 +521,14 @@
         { key: "meituan", label: "美团", url: "" },
         { key: "dianping", label: "点评", url: "" },
         { key: "douyin", label: "抖音", url: "" }
+      ],
+      reviewVariations: [
+        { entry: "从到店前的小顾虑或皮肤状态开头", focus: "护理过程里的服务解释和手法感受", rhythm: "短句多一点，像随手写", emoji: "😊" },
+        { entry: "从做完后第一眼看到的变化开头", focus: "项目效果和干净安静的环境", rhythm: "先感受后补细节", emoji: "✨" },
+        { entry: "从店员或美容师的一个服务细节开头", focus: "没有压迫感、过程舒服、项目体验", rhythm: "口语化但不夸张", emoji: "💆" },
+        { entry: "从今天临时想做护理的场景开头", focus: "适合自己的原因和做完体感", rhythm: "像普通顾客轻松记录", emoji: "👍" },
+        { entry: "从环境和放松感开头", focus: "肩颈/头疗/清洁过程中的细节", rhythm: "两三句长短交错", emoji: "🌿" },
+        { entry: "从之前担心踩雷、做完觉得还不错开头", focus: "服务耐心、项目效果自然", rhythm: "带一点真实犹豫和转折", emoji: "😌" }
       ]
     };
 
@@ -528,7 +536,9 @@
       selected: [],
       result: "",
       source: "local",
-      retryUsed: 0
+      retryUsed: 0,
+      reviewHistory: [],
+      variationCounter: 0
     };
 
     const serviceList = document.getElementById("serviceList");
@@ -635,6 +645,8 @@
       state.result = "";
       state.source = "local";
       state.retryUsed = 0;
+      state.reviewHistory = [];
+      state.variationCounter = 0;
       saveState();
       updateUI();
     }
@@ -685,9 +697,10 @@
 
       try {
         if (hasApiProxy) {
-          const generated = await requestDeepSeekReview(mode);
+          const generated = await requestDeepSeekReview(mode, createReviewVariation());
           state.result = generated.review;
           state.source = "deepseek";
+          rememberReview(generated.review);
           showToast(isRetry ? "DeepSeek已换一篇" : "DeepSeek已生成");
         } else {
           throw new Error("DeepSeek API unavailable");
@@ -709,7 +722,7 @@
       }
     }
 
-    async function requestDeepSeekReview(mode) {
+    async function requestDeepSeekReview(mode, variation) {
       const response = await fetch(getApiUrl("/api/generate-review"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -717,6 +730,9 @@
           brandName: CONFIG.brandName,
           selected: state.selected,
           previousReview: mode === "retry" ? state.result : "",
+          reviewHistory: getReviewHistory(mode),
+          variationSeed: variation.seed,
+          variationProfile: variation.profile,
           mode
         })
       });
@@ -729,6 +745,30 @@
         throw new Error("DeepSeek response missing review text");
       }
       return payload;
+    }
+
+    function createReviewVariation() {
+      const counter = Number(state.variationCounter || 0) + 1;
+      state.variationCounter = counter;
+      const base = `${Date.now()}-${counter}-${state.selected.join("|")}`;
+      let score = 0;
+      for (let i = 0; i < base.length; i += 1) score += base.charCodeAt(i);
+      const profile = CONFIG.reviewVariations[score % CONFIG.reviewVariations.length];
+      return {
+        seed: `${base}-${Math.random().toString(36).slice(2, 8)}`,
+        profile
+      };
+    }
+
+    function getReviewHistory(mode) {
+      const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
+      const current = mode === "retry" && state.result ? [state.result] : [];
+      return [...history, ...current].slice(-6);
+    }
+
+    function rememberReview(review) {
+      const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
+      state.reviewHistory = [...history, review].slice(-6);
     }
 
     function getApiUrl(path) {
@@ -829,6 +869,9 @@
           selected: state.selected,
           result: state.result,
           source: state.source,
+          retryUsed: state.retryUsed,
+          reviewHistory: state.reviewHistory,
+          variationCounter: state.variationCounter,
           ts: Date.now()
         }));
       } catch (e) {}
@@ -855,6 +898,9 @@
         state.result = state.selected.length === savedSelected.length && selectionUnchanged ? (saved.result || "") : "";
         state.source = saved.source === "deepseek" && state.result ? saved.source : "local";
         if (state.source !== "deepseek") state.result = "";
+        state.retryUsed = Number(saved.retryUsed || 0);
+        state.reviewHistory = Array.isArray(saved.reviewHistory) ? saved.reviewHistory.filter(Boolean).slice(-6) : [];
+        state.variationCounter = Number(saved.variationCounter || 0);
       } catch (e) {}
     }
 
