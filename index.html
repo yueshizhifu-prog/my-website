@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260727-empty-login" />
+  <link rel="stylesheet" href="styles.css?v=20260727-polish-status" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -532,13 +532,15 @@
               </div>
               <button id="videoBtn" class="primary panel-head-action">生成演示成片</button>
             </div>
-            <div id="exportStatus" class="export-status">还没有生成成片</div>
-            <div class="finished-library-toolbar">
-              <label class="finished-select-all">
-                <input id="selectAllFinishedJobs" type="checkbox">
-                全选成片
-              </label>
-              <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>删除选中</button>
+            <div class="export-control-row">
+              <div id="exportStatus" class="export-status is-idle">还没有生成成片</div>
+              <div class="finished-library-toolbar">
+                <label class="finished-select-all">
+                  <input id="selectAllFinishedJobs" type="checkbox">
+                  <span>全选成片</span>
+                </label>
+                <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>删除选中</button>
+              </div>
             </div>
             <div id="latestExport" class="finished-video-grid"></div>
             <details class="export-advanced">
@@ -710,7 +712,7 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="config.js?v=20260727-empty-login"></script>
-  <script src="app.js?v=20260727-empty-login"></script>
+  <script src="config.js?v=20260727-polish-status"></script>
+  <script src="app.js?v=20260727-polish-status"></script>
 </body>
 </html>
