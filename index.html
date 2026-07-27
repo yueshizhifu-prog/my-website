@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260727-account-delete" />
+  <link rel="stylesheet" href="styles.css?v=20260727-empty-login" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -15,9 +15,9 @@
         <p>从门店定位、脚本、镜头素材到成片导出，一步步把短视频做出来。</p>
         <div class="login-role-note" id="loginRoleNote">输入手机号或账号，系统会自动识别管理员和客户权限。</div>
         <label>手机号 / 账号</label>
-        <input id="loginUsername" value="client01" autocomplete="username" />
+        <input id="loginUsername" autocomplete="off" placeholder="请输入手机号或账号" />
         <label>密码</label>
-        <input id="loginPassword" value="client123" type="password" autocomplete="current-password" />
+        <input id="loginPassword" type="password" autocomplete="off" placeholder="请输入密码" />
         <button id="loginBtn" class="primary full">进入工作台</button>
         <div id="loginError" class="error"></div>
         <div class="hint">登录后自动识别身份；客户只进入日常剪辑流程，管理员可进入账号设置。</div>
@@ -710,7 +710,7 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="config.js?v=20260727-account-delete"></script>
-  <script src="app.js?v=20260727-account-delete"></script>
+  <script src="config.js?v=20260727-empty-login"></script>
+  <script src="app.js?v=20260727-empty-login"></script>
 </body>
 </html>
