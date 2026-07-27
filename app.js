@@ -27,6 +27,18 @@ if (apiSearchParam) {
 const configuredApiBaseUrl = String(window.AIVF_API_BASE_URL || localStorage.getItem("aivf_api_base_url") || "").trim().replace(/\/+$/, "");
 const staticPreviewMode = location.hostname.endsWith(".github.io") && !configuredApiBaseUrl;
 const staticPreviewMessage = "当前是 GitHub Pages 静态预览版，只能进入页面预览；登录、上传、AI 生成、配音和剪视频需要连接后端服务。";
+const loginPresets = {
+  client: {
+    username: "client01",
+    password: "client123",
+    note: "客户入口只保留日常使用流程，适合发给商家试用。",
+  },
+  admin: {
+    username: "admin",
+    password: "admin123",
+    note: "管理员入口用于内部配置、测试和排查问题。",
+  },
+};
 
 const researchRegenerateLimit = 3;
 const researchRegenerateWindowMs = 5 * 60 * 1000;
@@ -267,7 +279,7 @@ function getStaticPreviewUser(username = "admin") {
   return {
     id: `static-${clean}`,
     username: clean,
-    role: clean === "admin" ? "admin" : "demo",
+    role: clean === "admin" ? "admin" : (clean.startsWith("client") ? "customer" : "demo"),
   };
 }
 
@@ -324,7 +336,10 @@ function staticPreviewApi(path, options = {}) {
   if (path === "/api/auth/login" && method === "POST") {
     const username = String(payload.username || "").trim();
     const password = String(payload.password || "");
-    const valid = (username === "admin" && password === "admin123") || (username === "demo01" && password === "demo123");
+    const valid =
+      (username === "admin" && password === "admin123") ||
+      (username === "demo01" && password === "demo123") ||
+      (username === "client01" && password === "client123");
     if (!valid) throw new Error("账号或密码错误");
     return Promise.resolve({ ok: true, token: `static-preview-${username}`, user: getStaticPreviewUser(username) });
   }
@@ -566,6 +581,16 @@ function toggleSidebar() {
   state.sidebarCollapsed = !state.sidebarCollapsed;
   localStorage.setItem("aivf_sidebar_collapsed", state.sidebarCollapsed ? "1" : "0");
   applySidebarState();
+}
+
+function applyLoginPreset(type = "client") {
+  const preset = loginPresets[type] || loginPresets.client;
+  if ($("loginUsername")) $("loginUsername").value = preset.username;
+  if ($("loginPassword")) $("loginPassword").value = preset.password;
+  if ($("loginRoleNote")) $("loginRoleNote").textContent = preset.note;
+  document.querySelectorAll("[data-login-preset]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.loginPreset === type);
+  });
 }
 
 async function login() {
@@ -3106,6 +3131,10 @@ function escapeHtml(value) {
 }
 
 function bindActions() {
+  document.querySelectorAll("[data-login-preset]").forEach((button) => {
+    button.addEventListener("click", () => applyLoginPreset(button.dataset.loginPreset));
+  });
+  applyLoginPreset("client");
   $("loginBtn").addEventListener("click", login);
   $("loginPassword").addEventListener("keydown", (e) => {
     if (e.key === "Enter") login();
