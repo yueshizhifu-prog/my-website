@@ -20,6 +20,8 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
+const staticPreviewMode = location.hostname.endsWith(".github.io");
+const staticPreviewMessage = "当前是 GitHub Pages 静态预览版，只能进入页面预览；登录、上传、AI 生成、配音和剪视频需要连接后端服务。";
 
 const researchRegenerateLimit = 3;
 const researchRegenerateWindowMs = 5 * 60 * 1000;
@@ -228,15 +230,120 @@ function safeJsonBody(body) {
 }
 
 async function api(path, options = {}) {
+  if (staticPreviewMode && path.startsWith("/api/")) {
+    return staticPreviewApi(path, options);
+  }
   const headers = { ...(options.headers || {}) };
   headers["Content-Type"] = "application/json; charset=utf-8";
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
   const res = await fetch(path, { ...options, headers, body: safeJsonBody(options.body) });
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("后端服务未连接：请启动服务器后再操作");
+  }
   const data = await res.json();
   if (!res.ok || data.ok === false) {
     throw new Error(data.error || `请求失败：${res.status}`);
   }
   return data;
+}
+
+function parseRequestBody(body) {
+  if (!body) return {};
+  if (typeof body === "string") {
+    try { return JSON.parse(body); } catch { return {}; }
+  }
+  return body;
+}
+
+function getStaticPreviewUser(username = "admin") {
+  const clean = String(username || "admin").trim() || "admin";
+  return {
+    id: `static-${clean}`,
+    username: clean,
+    role: clean === "admin" ? "admin" : "demo",
+  };
+}
+
+function buildStaticPreviewCopy(payload = {}) {
+  const brand = payload.brandName || payload.storeIndustry || "本地门店";
+  const product = payload.mainProduct || "主推项目";
+  const city = payload.storeCity || "同城";
+  const title = `${brand}${product}到店体验`;
+  const strategy = [
+    `静态预览说明：当前页面运行在 GitHub Pages，没有连接后端和大模型。`,
+    `档案方向：围绕${city}本地客户，用真实门店、真实服务过程和真实反馈建立信任。`,
+    `内容重点：先讲客户痛点，再展示${product}的服务过程，最后给出到店理由。`,
+    `正式上线后，这里会由后端调用 DeepSeek/百炼生成完整调研和脚本。`,
+  ].join("\n");
+  const script = [
+    `很多${city}客户第一次选择${brand}，最担心的不是价格，而是不知道效果靠不靠谱。`,
+    `我们会先把服务流程讲清楚，再把真实过程和注意事项拍出来。`,
+    `${product}适合想少走弯路、希望看到真实体验的人。`,
+    `如果你也在附近，可以先了解一下，再决定要不要到店。`,
+  ].join("\n");
+  const shotPrompts = [
+    `文案：很多${city}客户第一次选择${brand}，最担心的不是价格，而是不知道效果靠不靠谱｜画面：老板或门店负责人正面口播｜素材：口播视频`,
+    `文案：我们会先把服务流程讲清楚，再把真实过程和注意事项拍出来｜画面：门店环境和服务流程细节｜素材：门店/过程素材`,
+    `文案：${product}适合想少走弯路、希望看到真实体验的人｜画面：项目成果、套餐权益或顾客反馈｜素材：产品/反馈素材`,
+    `文案：如果你也在附近，可以先了解一下，再决定要不要到店｜画面：门头、地址、引导咨询画面｜素材：门店素材`,
+  ];
+  return {
+    ok: true,
+    provider: "github-pages-preview",
+    result: {
+      taskType: payload.taskType || "script",
+      mode: payload.modelMode || "preview",
+      model: "static-preview",
+      strategy,
+      script,
+      shotPrompts,
+      tags: ["同城", "门店", "真实体验"],
+      topicOptions: [
+        {
+          title,
+          reason: "用于静态预览页面流程，正式上线后由后端大模型生成。",
+          script,
+          shotPrompts,
+          tags: ["同城", "门店", "真实体验"],
+        },
+      ],
+    },
+  };
+}
+
+function staticPreviewApi(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const payload = parseRequestBody(options.body);
+  if (path === "/api/auth/login" && method === "POST") {
+    const username = String(payload.username || "").trim();
+    const password = String(payload.password || "");
+    const valid = (username === "admin" && password === "admin123") || (username === "demo01" && password === "demo123");
+    if (!valid) throw new Error("账号或密码错误");
+    return Promise.resolve({ ok: true, token: `static-preview-${username}`, user: getStaticPreviewUser(username) });
+  }
+  if (path === "/api/me") {
+    return Promise.resolve({ ok: true, user: getStaticPreviewUser(state.token.replace(/^static-preview-/, "") || "admin") });
+  }
+  if (path === "/api/health") {
+    return Promise.resolve({ ok: true, name: "GitHub Pages 静态预览版" });
+  }
+  if (path === "/api/asset-groups" && method === "GET") {
+    return Promise.resolve({ ok: true, groups: [...defaultAssetGroups] });
+  }
+  if (path === "/api/assets" && method === "GET") {
+    return Promise.resolve({ ok: true, assets: [] });
+  }
+  if (path === "/api/voices" && method === "GET") {
+    return Promise.resolve({ ok: true, voices: [] });
+  }
+  if (path === "/api/jobs" && method === "GET") {
+    return Promise.resolve({ ok: true, jobs: [] });
+  }
+  if (path === "/api/copy/rewrite" && method === "POST") {
+    return Promise.resolve(buildStaticPreviewCopy(payload));
+  }
+  throw new Error(staticPreviewMessage);
 }
 
 function showApp() {
@@ -2019,6 +2126,10 @@ function renderAssetModal() {
 }
 
 async function uploadAsset() {
+  if (staticPreviewMode) {
+    toast(staticPreviewMessage);
+    return;
+  }
   const file = $("assetFile").files[0];
   if (!file) {
     toast("先选择文件");
@@ -2555,6 +2666,11 @@ function syncExportFields() {
 }
 
 async function generateTts() {
+  if (staticPreviewMode) {
+    $("exportStatus").textContent = staticPreviewMessage;
+    toast(staticPreviewMessage);
+    return;
+  }
   const renderShots = buildRenderShots();
   const text = $("ttsText").value.trim()
     ? buildVoiceoverText([], $("ttsText").value.trim())
@@ -2617,6 +2733,11 @@ async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
 }
 
 async function generateVideo() {
+  if (staticPreviewMode) {
+    $("exportStatus").textContent = staticPreviewMessage;
+    toast(staticPreviewMessage);
+    return false;
+  }
   syncExportFields();
   if (!state.shots.length) {
     toast("请先在脚本页点击“导入剪辑镜头”，再生成成片");
