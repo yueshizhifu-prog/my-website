@@ -1,917 +1,629 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>玥时之肤好评生成助手</title>
-  <style>
-    :root {
-      --ink: #25141b;
-      --muted: #846b75;
-      --soft: #fff7fa;
-      --panel: #fffafc;
-      --line: #ead5df;
-      --teal: #b72868;
-      --teal-deep: #5a1027;
-      --teal-soft: #f8e8f0;
-      --rose: #cf9b69;
-      --rose-soft: #f5e8dc;
-      --clay: #7d3d4f;
-      --shadow: 0 16px 38px rgba(45, 7, 20, .16);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      min-height: 100%;
-      background: #2a0715;
-    }
-
-    body {
-      min-height: 100vh;
-      color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background:
-        linear-gradient(180deg, rgba(42, 7, 21, .16), rgba(42, 7, 21, .72)),
-        url("assets/brand-bg.png") center top / cover fixed no-repeat;
-      padding: 0 14px 40px;
-      letter-spacing: 0;
-    }
-
-    button,
-    input,
-    textarea {
-      font: inherit;
-      letter-spacing: 0;
-    }
-
-    button {
-      border: 0;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .app {
-      width: min(100%, 430px);
-      margin: 0 auto;
-      padding: 18px 0 0;
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      border-radius: 8px;
-      min-height: 196px;
-      display: flex;
-      align-items: flex-end;
-      background:
-        linear-gradient(180deg, rgba(42, 7, 21, .18), rgba(42, 7, 21, .86)),
-        url("assets/brand-bg.png") center center / cover no-repeat;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, .16);
-    }
-
-    .hero-body {
-      width: 100%;
-      padding: 24px 20px 22px;
-      background: transparent;
-    }
-
-    .eyebrow {
-      color: #efc1d1;
-      font-size: 11px;
-      line-height: 1;
-      font-weight: 700;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      margin-bottom: 9px;
-    }
-
-    h1 {
-      color: #fff7fa;
-      font-size: 24px;
-      line-height: 1.22;
-      font-weight: 750;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      color: rgba(255, 247, 250, .78);
-      font-size: 13px;
-      line-height: 1.65;
-    }
-
-    .card {
-      margin-top: 12px;
-      background: var(--panel);
-      border: 1px solid rgba(219, 231, 232, .84);
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(31, 47, 53, .05);
-      padding: 16px;
-    }
-
-    .card-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .card-title {
-      font-size: 15px;
-      line-height: 1.35;
-      font-weight: 750;
-      color: var(--ink);
-    }
-
-    .hint {
-      flex: none;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .cat {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-      background: #fffdfd;
-    }
-
-    .cat + .cat {
-      margin-top: 8px;
-    }
-
-    .cat.open {
-      border-color: rgba(47, 127, 122, .42);
-      background: var(--teal-soft);
-    }
-
-    .cat-toggle {
-      width: 100%;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 12px;
-      background: transparent;
-      color: var(--ink);
-      text-align: left;
-    }
-
-    .cat-name {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .cat-name::before {
-      content: "";
-      width: 4px;
-      height: 16px;
-      border-radius: 2px;
-      background: linear-gradient(180deg, var(--teal), var(--rose));
-      flex: none;
-    }
-
-    .cat-meta {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    .badge {
-      display: none;
-      padding: 2px 8px;
-      border-radius: 999px;
-      color: #fff;
-      background: var(--teal);
-      font-weight: 700;
-      line-height: 1.45;
-    }
-
-    .cat.open .badge.on {
-      display: inline-block;
-    }
-
-    .arrow {
-      color: var(--teal);
-      transition: transform .2s;
-    }
-
-    .cat.open .arrow {
-      transform: rotate(180deg);
-    }
-
-    .cat-body {
-      display: none;
-      padding: 0 10px 12px;
-    }
-
-    .cat.open .cat-body {
-      display: block;
-    }
-
-    .service-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .service {
-      min-height: 48px;
-      padding: 11px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: #415156;
-      font-size: 13px;
-      line-height: 1.32;
-      text-align: left;
-      transition: border-color .16s, background .16s, color .16s, transform .16s;
-    }
-
-    .service:active {
-      transform: scale(.98);
-    }
-
-    .service.selected {
-      border-color: var(--teal);
-      background: var(--teal-soft);
-      color: var(--teal-deep);
-      font-weight: 750;
-    }
-
-    .selected-row {
-      display: none;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px dashed var(--line);
-    }
-
-    .selected-row.on {
-      display: flex;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: var(--rose-soft);
-      color: #8b4654;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .generate {
-      width: 100%;
-      min-height: 52px;
-      margin-top: 12px;
-      border-radius: 8px;
-      color: #fff;
-      background: linear-gradient(135deg, var(--teal), var(--rose));
-      font-size: 16px;
-      font-weight: 800;
-      box-shadow: 0 12px 28px rgba(47, 127, 122, .22);
-    }
-
-    .generate:disabled,
-    .copy:disabled,
-    .retry:disabled {
-      opacity: .45;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    .result {
-      display: none;
-    }
-
-    .result.on {
-      display: block;
-    }
-
-    .result-text {
-      min-height: 154px;
-      padding: 14px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.86), rgba(245,249,250,.95));
-      color: #24363b;
-      font-size: 15px;
-      line-height: 1.82;
-      white-space: pre-wrap;
-      word-break: break-word;
-      transition: opacity .18s ease, transform .18s ease;
-    }
-
-    .result-text.is-refreshing {
-      opacity: .52;
-      transform: translateY(2px);
-    }
-
-    .actions {
-      display: grid;
-      grid-template-columns: 1.35fr 1fr;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .copy,
-    .retry {
-      position: relative;
-      min-height: 44px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 800;
-      overflow: hidden;
-    }
-
-    .copy {
-      color: #fff;
-      background: var(--teal);
-    }
-
-    .copy.pulse {
-      animation: pulse 1.2s ease-in-out 2;
-    }
-
-    .retry {
-      color: var(--teal-deep);
-      background: var(--teal-soft);
-    }
-
-    .generate.is-loading,
-    .retry.is-loading {
-      pointer-events: none;
-    }
-
-    .generate.is-loading::before,
-    .retry.is-loading::before {
-      content: "";
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      margin-right: 8px;
-      border: 2px solid currentColor;
-      border-right-color: transparent;
-      border-radius: 999px;
-      vertical-align: -2px;
-      animation: spin .72s linear infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); box-shadow: none; }
-      50% { transform: scale(1.025); box-shadow: 0 10px 26px rgba(47, 127, 122, .26); }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .platforms {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .platform {
-      min-height: 42px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .platform.meituan {
-      background: #f4c400;
-      color: #3a2a00;
-    }
-
-    .platform.dianping {
-      background: #ef7f34;
-    }
-
-    .platform.douyin {
-      background: #202328;
-    }
-
-    .notes {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      background: rgba(255, 250, 252, .82);
-      border: 1px solid rgba(219, 231, 232, .82);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.7;
-    }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: max(22px, env(safe-area-inset-bottom));
-      transform: translateX(-50%) translateY(16px);
-      z-index: 20;
-      max-width: min(360px, calc(100vw - 32px));
-      padding: 10px 16px;
-      border-radius: 999px;
-      background: rgba(42, 7, 21, .92);
-      color: #fff;
-      font-size: 13px;
-      line-height: 1.5;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .22s, transform .22s;
-      text-align: center;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    @media (min-width: 760px) {
-      body {
-        padding-top: 28px;
-      }
-
-      .app {
-        padding-bottom: 28px;
-      }
-
-      .hero {
-        min-height: 212px;
-      }
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 视频工厂</title>
+  <link rel="stylesheet" href="styles.css?v=20260724-upload-hook" />
 </head>
 <body>
-  <main class="app">
-    <section class="hero" aria-labelledby="pageTitle">
-      <div class="hero-body">
-        <div class="eyebrow">YUE SHI SKIN</div>
-        <h1 id="pageTitle">玥时之肤好评生成助手</h1>
-        <p class="subtitle">选好今天体验的项目，生成一段更像真实顾客口吻的评价文案。</p>
+  <div id="loginView" class="login-shell">
+    <div class="login-art">
+      <div class="login-card">
+        <div class="brand-mark">AI 视频工厂</div>
+        <h1>本地商家专属 · 视频生产驾驶舱</h1>
+        <p>从门店定位、脚本、镜头素材到成片导出，一步步把短视频做出来。</p>
+        <label>账号</label>
+        <input id="loginUsername" value="admin" autocomplete="username" />
+        <label>密码</label>
+        <input id="loginPassword" value="admin123" type="password" autocomplete="current-password" />
+        <button id="loginBtn" class="primary full">进入工作台</button>
+        <div id="loginError" class="error"></div>
+        <div class="hint">测试账号：admin/admin123，demo01/demo123</div>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <section class="card" aria-labelledby="serviceTitle">
-      <div class="card-head">
-        <div class="card-title" id="serviceTitle">今天体验了哪些项目？</div>
-        <div class="hint">最多选 2 个</div>
+  <div id="appView" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="收起侧边栏" aria-expanded="true">‹</button>
+      <div class="brand-block">
+        <div class="logo">AI 视频工厂</div>
+        <div class="sub">本地商家专属 · 视频生产驾驶舱</div>
       </div>
-      <div id="serviceList"></div>
-      <div class="selected-row" id="selectedRow"></div>
-    </section>
 
-    <button class="generate" id="generateBtn" type="button" disabled>生成我的好评</button>
-
-    <section class="card result" id="resultCard" aria-labelledby="resultTitle">
-      <div class="card-head">
-        <div class="card-title" id="resultTitle">专属好评文案</div>
-        <div class="hint" id="resultHint">DeepSeek生成</div>
-      </div>
-      <div class="result-text" id="resultText"></div>
-      <div class="actions">
-        <button class="copy" id="copyBtn" type="button">复制文案</button>
-        <button class="retry" id="retryBtn" type="button">换一篇</button>
-      </div>
-      <div class="platforms" id="platforms"></div>
-      <div class="notes" id="sourceNote">专属文案只通过 DeepSeek API 实时生成；接口不可用时会直接生成失败。</div>
-    </section>
-  </main>
-
-  <div class="toast" id="toast"></div>
-
-  <script>
-    const CONFIG = {
-      brandName: "玥时之肤",
-      maxServices: 2,
-      maxRetries: 3,
-      publicApiBaseUrl: "https://yueshi-review-vkvepxtngm.cn-shanghai.fcapp.run",
-      storageKey: "yueshi_review_state_v1",
-      categories: [
-        {
-          name: "维养护肤",
-          items: ["基础清洁｜T区小气泡", "洁润净肤七步曲｜清洁毛孔+按摩任选", "润衡九步曲｜补水锁水", "双抗十步曲｜抗糖抗氧"]
-        },
-        {
-          name: "交联水光｜含肩颈+头疗",
-          items: ["春水光｜强韧抗敏", "夏水光｜净痘控油", "秋水光｜提亮补水", "冬水光｜紧致提拉"]
-        }
-      ],
-      platforms: [
-        { key: "meituan", label: "美团", url: "" },
-        { key: "dianping", label: "点评", url: "" },
-        { key: "douyin", label: "抖音", url: "" }
-      ],
-      reviewVariations: [
-        { entry: "从到店前的小顾虑或皮肤状态开头", focus: "护理过程里的服务解释和手法感受", rhythm: "短句多一点，像随手写", emoji: "😊" },
-        { entry: "从做完后第一眼看到的变化开头", focus: "项目效果和干净安静的环境", rhythm: "先感受后补细节", emoji: "✨" },
-        { entry: "从店员或美容师的一个服务细节开头", focus: "没有压迫感、过程舒服、项目体验", rhythm: "口语化但不夸张", emoji: "💆" },
-        { entry: "从今天临时想做护理的场景开头", focus: "适合自己的原因和做完体感", rhythm: "像普通顾客轻松记录", emoji: "👍" },
-        { entry: "从环境和放松感开头", focus: "肩颈/头疗/清洁过程中的细节", rhythm: "两三句长短交错", emoji: "🌿" },
-        { entry: "从之前担心踩雷、做完觉得还不错开头", focus: "服务耐心、项目效果自然", rhythm: "带一点真实犹豫和转折", emoji: "😌" }
-      ]
-    };
-
-    const state = {
-      selected: [],
-      result: "",
-      source: "local",
-      retryUsed: 0,
-      reviewHistory: [],
-      variationCounter: 0
-    };
-
-    const serviceList = document.getElementById("serviceList");
-    const selectedRow = document.getElementById("selectedRow");
-    const generateBtn = document.getElementById("generateBtn");
-    const resultCard = document.getElementById("resultCard");
-    const resultText = document.getElementById("resultText");
-    const resultHint = document.getElementById("resultHint");
-    const copyBtn = document.getElementById("copyBtn");
-    const retryBtn = document.getElementById("retryBtn");
-    const platforms = document.getElementById("platforms");
-    const sourceNote = document.getElementById("sourceNote");
-    const toast = document.getElementById("toast");
-    let isGenerating = false;
-    const hasLocalApiProxy = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
-    const publicApiBaseUrl = String(CONFIG.publicApiBaseUrl || "").replace(/\/$/, "");
-    const hasApiProxy = hasLocalApiProxy || Boolean(publicApiBaseUrl);
-
-    function escapeHtml(text) {
-      return String(text).replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      }[char]));
-    }
-
-    function init() {
-      restoreState();
-      renderServices();
-      renderPlatforms();
-      updateUI();
-      bindEvents();
-    }
-
-    function bindEvents() {
-      serviceList.addEventListener("click", event => {
-        const catBtn = event.target.closest("[data-cat-toggle]");
-        if (catBtn) {
-          const index = Number(catBtn.dataset.catToggle);
-          document.querySelector(`[data-cat="${index}"]`).classList.toggle("open");
-          return;
-        }
-
-        const serviceBtn = event.target.closest("[data-service]");
-        if (!serviceBtn) return;
-        toggleService(serviceBtn.dataset.service);
-      });
-
-      generateBtn.addEventListener("click", () => generateReview("generate"));
-      retryBtn.addEventListener("click", () => generateReview("retry"));
-      copyBtn.addEventListener("click", () => copyReview("文案已复制"));
-
-      platforms.addEventListener("click", event => {
-        const btn = event.target.closest("[data-platform]");
-        if (!btn) return;
-        const platform = CONFIG.platforms.find(p => p.key === btn.dataset.platform);
-        copyReview(`文案已复制，去${platform.label}粘贴即可`);
-        if (platform.url) window.open(platform.url, "_blank", "noopener");
-      });
-    }
-
-    function renderServices() {
-      serviceList.innerHTML = CONFIG.categories.map((cat, catIndex) => {
-        const items = cat.items.map(service => `
-          <button class="service" type="button" data-service="${escapeHtml(service)}">${escapeHtml(service)}</button>
-        `).join("");
-        return `
-          <div class="cat open" data-cat="${catIndex}">
-            <button class="cat-toggle" type="button" data-cat-toggle="${catIndex}">
-              <span class="cat-name">${escapeHtml(cat.name)}</span>
-              <span class="cat-meta">
-                <span class="badge" data-badge="${catIndex}"></span>
-                <span>${cat.items.length}项</span>
-                <span class="arrow">⌄</span>
-              </span>
+      <nav class="side-flow">
+        <div class="nav nav-combo active" data-tabs="researchTab libraryTab" title="调研与视频库">
+          <span class="step-dot">1</span>
+          <span class="nav-copy">
+            <strong>调研</strong>
+            <em>档案与素材准备</em>
+          </span>
+          <i class="step-check">✓</i>
+          <span class="nav-segments" role="group" aria-label="调研阶段入口">
+            <button class="nav-segment active" data-tab="researchTab" type="button">
+              <b>调研档案</b>
             </button>
-            <div class="cat-body">
-              <div class="service-grid">${items}</div>
+            <button class="nav-segment" data-tab="libraryTab" type="button">
+              <b>视频库</b>
+            </button>
+          </span>
+        </div>
+        <button class="nav" data-tab="scriptTab" title="脚本生成">
+          <span class="step-dot">2</span>
+          <span class="nav-copy"><strong>脚本</strong><em>文案与分镜</em></span>
+        </button>
+        <button class="nav" data-tab="editorTab" title="剪辑">
+          <span class="step-dot">3</span>
+          <span class="nav-copy"><strong>剪辑</strong><em>镜头匹配混剪</em></span>
+        </button>
+        <button class="nav" data-tab="exportTab" title="成品库存">
+          <span class="step-dot">4</span>
+          <span class="nav-copy"><strong>成品库存</strong><em>预览与下载成片</em></span>
+        </button>
+      </nav>
+
+      <div class="store-card">
+        <div class="store-icon">店</div>
+        <div class="store-copy">
+          <strong>美容美容门店</strong>
+          <span id="accountName">-</span>
+        </div>
+      </div>
+      <div class="today">2026-07-18 星期六</div>
+      <button id="logoutBtn" class="ghost small">退出</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">当前工作台</p>
+          <h2 id="workspaceTitle">调研档案</h2>
+          <p id="workspaceSubtitle" class="workspace-subtitle">先让系统理解你是谁、店铺情况和当前卡点。</p>
+        </div>
+        <button id="topExportBtn" class="outline-cta hidden">成品库存</button>
+      </header>
+
+      <section id="researchTab" class="tab active">
+        <section class="dossier-grid">
+          <div class="panel dossier-panel">
+            <div class="panel-head">
+              <span class="num">调</span>
+              <div>
+                <h2>生意档案 / 个人档案</h2>
+                <p>这一栏只让系统更了解这个人和门店，不生成脚本、不拆分镜、不处理素材。</p>
+              </div>
+            </div>
+            <div class="dossier-section-title">门店基本信息</div>
+            <div class="form-row single-first">
+              <div>
+                <label>DeepSeek 模型</label>
+                <select id="modelMode">
+                  <option value="fast">快速版：快速建立用户画像</option>
+                  <option value="thinking">思考版：深度分析人设、卡点和表达方向</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>您的行业是什么？</label>
+                <input id="storeIndustry" required placeholder="例如：餐饮、美容、养生、美甲美睫、酒旅" />
+              </div>
+              <div>
+                <label>您的店名/品牌名是？</label>
+                <input id="brandName" required placeholder="例如：牛叁佬化州香油鸡" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>门店所在的城市是？</label>
+                <input id="storeCity" required placeholder="例如：广州、佛山、深圳" />
+              </div>
+              <div>
+                <label>您门店的位置简单描述：</label>
+                <input id="storeLocation" required placeholder="例如：天河区某商场附近、社区底商、写字楼楼下" />
+              </div>
+            </div>
+            <div class="dossier-section-title">人设基本信息</div>
+            <div class="form-row">
+              <div>
+                <label>短视频中您的自我称呼是？</label>
+                <input id="personaName" required placeholder="例如：牛叁佬东哥、皮肤管理小敏、老板娘阿芳" />
+              </div>
+              <div>
+                <label>您的年龄是？</label>
+                <input id="personaAge" required placeholder="例如：35" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>您的性别是？</label>
+                <select id="personaGender" required>
+                  <option value="">请选择</option>
+                  <option>男士</option>
+                  <option>女士</option>
+                  <option>不强调性别</option>
+                </select>
+              </div>
+              <div>
+                <label>您这行业/门店做了多少年？</label>
+                <input id="businessYears" required placeholder="例如：6 年、10 年、刚开业 3 个月" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>您自己是哪里人？</label>
+                <input id="hometown" required placeholder="例如：化州本地人、潮汕人、湖南人" />
+              </div>
+              <div>
+                <label>您希望主推的产品/套餐是？<span class="optional">选填</span></label>
+                <textarea id="mainProduct" rows="3" placeholder="例如：招牌套餐、团购套餐、主推服务项目、客单价区间"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>您的产品/服务优势？<span class="optional">选填</span></label>
+                <textarea id="serviceAdvantage" rows="4" placeholder="例如：本地老店、老板亲自服务、食材新鲜、案例真实、流程标准"></textarea>
+              </div>
+              <div>
+                <label>有没有其他想补充的？<span class="optional">选填</span></label>
+                <textarea id="extraInfo" rows="4" placeholder="例如：想强调的故事、客群、门店福利、不能说的内容、风格偏好"></textarea>
+              </div>
+            </div>
+            <button id="researchBtn" class="primary">生成个人调研定位</button>
+            <div id="researchLoading" class="loading-line hidden"><span class="spinner"></span><span id="researchLoadingText">正在生成调研定位...</span></div>
+          </div>
+          <aside class="panel dossier-result-panel">
+            <div class="panel-head">
+              <span class="num">档</span>
+              <div>
+                <h2>AI 调研结果</h2>
+                <p>生成后会沉淀为后续脚本、视频库和剪辑的基础档案。</p>
+              </div>
+            </div>
+            <div id="modelBadge" class="model-badge">等待调研</div>
+            <div id="researchProgress" class="generation-progress hidden" aria-live="polite">
+              <div class="progress-head">
+                <span id="researchProgressStep">正在读取门店档案</span>
+                <strong id="researchProgressPercent">0%</strong>
+              </div>
+              <div class="progress-track"><div id="researchProgressBar" class="progress-bar"></div></div>
+              <div id="researchProgressSteps" class="progress-steps"></div>
+            </div>
+            <label>个人调研结果</label>
+            <textarea id="resultStrategy" rows="18" placeholder="生成后会显示：用户画像、表达优势、信任背书、内容禁区、适合的表达方式"></textarea>
+            <button id="toScriptBtn" class="secondary">导入调研档案库</button>
+          </aside>
+        </section>
+      </section>
+
+      <section id="scriptTab" class="tab">
+        <div class="workspace-grid script-workspace">
+          <div class="panel script-config-panel">
+            <div class="panel-head">
+              <span class="num">2</span>
+              <div>
+                <h2>脚本生成</h2>
+                <p>先导入调研档案，再选择要出的系列，DeepSeek 会结合档案和内容逻辑生成选题、文案和分镜。</p>
+              </div>
+            </div>
+            <div class="dossier-mini">
+              <button id="importDossierBtn" class="secondary">导入调研档案库</button>
+              <div>
+                <strong id="scriptDossierState">未导入档案</strong>
+                <span>导入后系统会带着档案生成，客户不用看全文。</span>
+              </div>
+            </div>
+            <textarea id="scriptDossier" class="hidden" readonly></textarea>
+            <div class="form-row">
+              <div>
+                <label>DeepSeek 文案模型</label>
+                <select id="scriptModelMode">
+                  <option value="fast">快速版：更快生成一版可用文案</option>
+                  <option value="thinking">思考版：深度思考人群、人性点和破圈选题</option>
+                </select>
+              </div>
+              <div>
+                <label>选择要出的系列</label>
+                <select id="templateSelect"></select>
+              </div>
+            </div>
+            <label>爆款标题模板</label>
+            <select id="scriptTitleStyle">
+              <option>智能推荐样式</option>
+              <option>痛点钩子标题</option>
+              <option>反差悬念标题</option>
+              <option>数字清单标题</option>
+              <option>同城场景标题</option>
+              <option>避坑提醒标题</option>
+              <option>结果承诺标题</option>
+              <option>真实测评标题</option>
+              <option>团购成交标题</option>
+            </select>
+            <p id="scriptTitleTemplateHint" class="field-hint title-template-hint"></p>
+            <div class="template-tabs" id="templateTabs"></div>
+            <div id="templatePreview" class="template-preview"></div>
+            <div id="localTargetPanel" class="conditional-panel hidden">
+              <h3>同城人群选择 <span class="optional">必选</span></h3>
+              <p class="muted compact-hint">可多选，年龄自动匹配。</p>
+              <div class="form-row">
+                <div>
+                  <label>抖音八大人群维度</label>
+                  <input id="localAudienceSegment" type="hidden" />
+                  <div id="localAudienceSelect" class="multi-select">
+                    <button id="localAudienceToggle" class="multi-select-toggle" type="button" aria-expanded="false">
+                      <span id="localAudienceSummary">请选择人群</span>
+                      <i>⌄</i>
+                    </button>
+                    <div id="localAudienceSegmentGroup" class="multi-choice-grid multi-select-menu hidden">
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="人群不限" />人群不限</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="Z 世代" />Z 世代</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="新锐白领" />新锐白领</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="精致妈妈" />精致妈妈</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="资深中产" />资深中产</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市蓝领" />都市蓝领</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇青年" />小镇青年</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇中老年" />小镇中老年</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市银发" />都市银发</label>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label>年龄范围</label>
+                  <input id="localAgeRange" readonly placeholder="自动匹配" />
+                </div>
+              </div>
+            </div>
+            <label>选题方向</label>
+            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会先给出 3-5 个选题方向，以及为什么这些选题适合这个档案和所选系列。"></textarea>
+            <input id="resultTitle" type="hidden" />
+            <input id="resultTags" type="hidden" />
+            <div class="button-row">
+              <button id="scriptBtn" class="primary">用 DeepSeek 生成文案 + 分镜</button>
+            </div>
+            <div id="scriptLoading" class="loading-line hidden"><span class="spinner"></span><span id="scriptLoadingText">正在生成脚本文案...</span></div>
+          </div>
+          <div class="panel script-output-panel">
+            <div class="panel-head">
+              <span class="num">镜</span>
+              <div>
+                <h2>文案和分镜</h2>
+                <p>右侧只放生成后的可执行内容，方便复制、调整和导入剪辑。</p>
+              </div>
+              <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="选用选题"></div>
+            </div>
+            <div id="scriptProgressPanel" class="generation-progress hidden" aria-live="polite">
+              <div class="progress-head">
+                <span id="scriptProgressStep">正在整理调研档案</span>
+                <strong id="scriptProgressPercent">0%</strong>
+              </div>
+              <div class="progress-track"><div id="scriptProgressBar" class="progress-bar"></div></div>
+              <div id="scriptProgressSteps" class="progress-steps"></div>
+            </div>
+            <label>文案内容</label>
+            <textarea id="resultScript" rows="10" placeholder="这里会生成可直接拍摄的短视频文案"></textarea>
+            <label>分镜 / 拍摄清单</label>
+            <textarea id="resultPrompts" rows="12" placeholder="生成后会显示每个镜头：文案、画面、需要什么素材"></textarea>
+            <div class="button-row">
+              <button id="splitShotBtn" class="secondary">导入剪辑镜头</button>
             </div>
           </div>
-        `;
-      }).join("");
-    }
+        </div>
+      </section>
 
-    function renderPlatforms() {
-      platforms.innerHTML = CONFIG.platforms.map(platform => `
-        <button class="platform ${platform.key}" type="button" data-platform="${platform.key}">${escapeHtml(platform.label)}</button>
-      `).join("");
-    }
+      <section id="libraryTab" class="tab">
+        <div class="library-shell">
+          <div class="library-top-card">
+            <div class="panel-head">
+              <span class="num">库</span>
+              <div>
+                <h2>视频库</h2>
+                <p>素材按视频库分组管理；声音克隆单独管理，后续剪辑按镜头调用。</p>
+              </div>
+              <button id="createAssetGroupBtn" class="primary panel-head-action" type="button">＋ 新增视频库</button>
+            </div>
+            <div class="quota-strip">
+              <div>
+                <strong>素材库容量</strong>
+                <span id="assetQuotaText">0GB / 5GB</span>
+              </div>
+              <div class="quota-bar"><i id="assetQuotaBar"></i></div>
+              <em id="assetQuotaHint">内部体验版先限制 5GB，后续对外版可按账号扩容。</em>
+            </div>
+          </div>
 
-    function toggleService(service) {
-      const exists = state.selected.includes(service);
-      if (exists) {
-        state.selected = state.selected.filter(item => item !== service);
-      } else {
-        if (state.selected.length >= CONFIG.maxServices) {
-          showToast(`最多选 ${CONFIG.maxServices} 个项目`);
-          return;
-        }
-        state.selected.push(service);
-      }
-      state.result = "";
-      state.source = "local";
-      state.retryUsed = 0;
-      state.reviewHistory = [];
-      state.variationCounter = 0;
-      saveState();
-      updateUI();
-    }
+          <div class="library-two-columns">
+            <div class="panel asset-library-panel">
+              <div class="section-title compact-title">
+                <span class="mini-icon">素</span>
+                <div>
+                  <h2>素材库</h2>
+                  <p>客户自己创建视频库；点击任意视频库即可上传、选择和删除素材。</p>
+                </div>
+              </div>
+              <div id="assetGroupGrid" class="asset-group-grid"></div>
+            </div>
 
-    function updateUI() {
-      document.querySelectorAll("[data-service]").forEach(btn => {
-        btn.classList.toggle("selected", state.selected.includes(btn.dataset.service));
-      });
+            <aside class="panel voice-clone-panel">
+              <div class="section-title compact-title">
+                <span class="mini-icon">声</span>
+                <div>
+                  <h2>声音克隆</h2>
+                  <p>上传本人或已授权声音样本，生成后剪辑和成品配音可直接选择。</p>
+                </div>
+              </div>
+              <div class="voice-form">
+                <label>声音名称</label>
+                <input id="voiceName" placeholder="例如：老板自然口播" />
+                <label>选择声音样本</label>
+                <select id="voiceSampleSelect"></select>
+                <label class="checkline">
+                  <input id="voiceConsent" type="checkbox" />
+                  我确认该声音为本人或已取得明确授权
+                </label>
+                <button id="createVoiceBtn" class="secondary">克隆声音档案</button>
+              </div>
+              <div class="voice-tip">
+                已接入阿里云百炼声音复刻。建议上传 10 秒-5 分钟清晰人声；系统会通过 OSS 临时链接给百炼读取样本。
+              </div>
+              <div id="voiceList" class="voice-list"></div>
+            </aside>
+          </div>
 
-      CONFIG.categories.forEach((cat, index) => {
-        const selectedCount = cat.items.filter(item => state.selected.includes(item)).length;
-        const badge = document.querySelector(`[data-badge="${index}"]`);
-        if (!badge) return;
-        badge.classList.toggle("on", selectedCount > 0);
-        badge.textContent = selectedCount ? `已选${selectedCount}` : "";
-        if (selectedCount) document.querySelector(`[data-cat="${index}"]`).classList.add("open");
-      });
+          <div id="assetGroupModal" class="library-modal hidden" aria-hidden="true">
+            <div class="library-modal-backdrop" data-close-asset-modal></div>
+            <div class="library-modal-card">
+              <div class="library-modal-head">
+                <div>
+                  <span class="eyebrow">当前视频库</span>
+                  <h3 id="assetModalTitle">未分组</h3>
+                  <p id="assetModalMeta">0 个素材 · 0 B</p>
+                </div>
+                <button class="icon-btn" type="button" data-close-asset-modal>×</button>
+              </div>
+              <div class="upload-panel in-modal">
+                <div class="upload-panel-head">
+                  <strong>添加素材</strong>
+                  <span id="assetUploadHint">素材会直接进入当前视频库。</span>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <label>上传到哪个视频库</label>
+                    <select id="assetLibrarySelect"></select>
+                  </div>
+                  <div>
+                    <label>素材用途</label>
+                    <select id="assetType">
+                      <option value="talking_head">口播视频</option>
+                      <option value="scene">门店环境</option>
+                      <option value="process">项目过程</option>
+                      <option value="feedback">顾客反馈</option>
+                      <option value="product">产品/团购图</option>
+                      <option value="voice_sample">声音样本</option>
+                      <option value="bgm">BGM 音乐</option>
+                    </select>
+                  </div>
+                </div>
+                <label>素材文件</label>
+                <input id="assetFile" type="file" />
+                <button id="uploadAssetBtn" class="primary">上传到当前视频库</button>
+              </div>
+              <div class="library-modal-subhead">
+                <strong>素材管理</strong>
+                <span>在这里选择或删除素材，页面底部不再单独铺列表。</span>
+              </div>
+              <div id="assetList" class="library-modal-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      generateBtn.disabled = state.selected.length === 0;
-      selectedRow.classList.toggle("on", state.selected.length > 0);
-      selectedRow.innerHTML = state.selected.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join("");
-      updateRetryButton(false);
+      <section id="editorTab" class="tab">
+        <div class="workspace-grid one-column">
+          <div class="panel wide-panel">
+            <div class="panel-head">
+              <span class="num">剪</span>
+              <div>
+                <h2>剪辑</h2>
+                <p>把脚本里的文案和分镜导入，再给每个镜头匹配客户自建的视频库素材。</p>
+              </div>
+              <button id="oneClickEditBtn" class="primary panel-head-action" type="button">一键成品剪辑</button>
+            </div>
+            <div id="editorMaterialNotice" class="editor-notice hidden">
+              <div>
+                <strong>剪辑前先补齐视频库</strong>
+                <p id="editorMaterialNoticeText">当前缺少素材或声音，请先去视频库添加。</p>
+              </div>
+              <button id="editorGoLibraryBtn" class="secondary" type="button">去视频库添加素材 / 声音</button>
+            </div>
+            <div id="editProgressOverlay" class="edit-progress-overlay hidden" aria-live="polite">
+              <div class="edit-loader">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div>
+                <h3>正在一键成品剪辑</h3>
+                <p id="editProgressText">正在生成克隆配音、匹配素材和合成成片，请保持页面打开。</p>
+                <div class="edit-progress-track"><i id="editProgressBar"></i></div>
+                <div id="editProgressSteps" class="edit-progress-steps">
+                  <em>生成配音</em>
+                  <em>匹配素材</em>
+                  <em>合成成片</em>
+                  <em>写入成品库</em>
+                </div>
+              </div>
+            </div>
+            <div class="button-row top-actions">
+              <button id="addShotBtn" class="secondary">手动添加镜头</button>
+              <button id="autoMatchBtn" class="secondary">从脚本分镜导入</button>
+            </div>
+            <div class="editor-quick-settings">
+              <div class="smart-title-card">
+                <span class="smart-title-icon">标</span>
+                <div>
+                  <p class="eyebrow">AI 标题判断</p>
+                  <h3 id="editorRecommendedTitleStyle">等待导入镜头</h3>
+                  <p id="editorTitleTemplateHint" class="field-hint title-template-hint">导入脚本后，系统会根据文案和分镜自动判断最适合的标题类型。</p>
+                </div>
+              </div>
+              <div class="editor-audio-bar">
+                <div>
+                  <label>克隆声音项目</label>
+                  <select id="editorVoiceSelect"></select>
+                </div>
+                <div>
+                  <label>BGM 设置</label>
+                  <select id="editorBgmMode">
+                    <option>智能推荐 BGM</option>
+                    <option>不用 BGM</option>
+                    <option>常用BGM-轻快种草</option>
+                    <option>常用BGM-温柔口播</option>
+                    <option>常用BGM-高级氛围</option>
+                    <option>常用BGM-同城生活</option>
+                    <option>常用BGM-团购促单</option>
+                    <option>常用BGM-舒缓信任</option>
+                  </select>
+                </div>
+                <div class="voice-speed-control">
+                  <label for="editorVoiceSpeed">声音语速 <span id="editorVoiceSpeedValue">1.0x</span></label>
+                  <div class="voice-speed-row">
+                    <input id="editorVoiceSpeed" type="range" min="0.8" max="1.5" step="0.1" value="1.0" list="voiceSpeedMarks" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="shot-table-wrap">
+              <table class="shot-table">
+                <colgroup>
+                  <col class="shot-col-index" />
+                  <col class="shot-col-copy" />
+                  <col class="shot-col-visual" />
+                  <col class="shot-col-material" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>镜头</th>
+                    <th>口播文案</th>
+                    <th>分镜画面</th>
+                    <th>视频库匹配</th>
+                  </tr>
+                </thead>
+                <tbody id="shotTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      if (state.result) {
-        resultText.textContent = state.result;
-        resultHint.textContent = "DeepSeek生成";
-        sourceNote.textContent = getSourceNote();
-        resultCard.classList.add("on");
-      } else {
-        resultText.textContent = "";
-        resultCard.classList.remove("on");
-      }
-    }
+      <section id="exportTab" class="tab">
+        <div class="workspace-grid one-column">
+          <div class="panel wide-panel finished-library-panel">
+            <div class="panel-head">
+              <span class="num">4</span>
+              <div>
+                <h2>成品素材库</h2>
+                <p>这里像素材视频库一样保存成片效果，客户只需要预览、下载和复用。</p>
+              </div>
+              <button id="videoBtn" class="primary panel-head-action">生成演示成片</button>
+            </div>
+            <div id="exportStatus" class="export-status">还没有生成成片</div>
+            <div class="finished-library-toolbar">
+              <label class="finished-select-all">
+                <input id="selectAllFinishedJobs" type="checkbox">
+                全选成片
+              </label>
+              <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>删除选中</button>
+            </div>
+            <div id="latestExport" class="finished-video-grid"></div>
+            <details class="export-advanced">
+              <summary>高级生成设置</summary>
+              <div class="export-advanced-grid">
+                <div>
+                  <label>选择声音</label>
+                  <select id="ttsVoiceSelect"></select>
+                </div>
+                <div>
+                  <label>生成条数</label>
+                  <select id="renderCount">
+                    <option value="1">1 条</option>
+                    <option value="2">2 条</option>
+                    <option value="3">3 条</option>
+                    <option value="5">5 条</option>
+                  </select>
+                </div>
+                <div>
+                  <label>BGM 设置</label>
+                  <select id="bgmMode">
+                    <option>智能推荐 BGM</option>
+                    <option>不用 BGM</option>
+                    <option>常用BGM-轻快种草</option>
+                    <option>常用BGM-温柔口播</option>
+                    <option>常用BGM-高级氛围</option>
+                    <option>常用BGM-同城生活</option>
+                    <option>常用BGM-团购促单</option>
+                    <option>常用BGM-舒缓信任</option>
+                  </select>
+                </div>
+                <div class="voice-speed-control">
+                  <label for="voiceSpeed">声音语速 <span id="voiceSpeedValue">1.0x</span></label>
+                  <div class="voice-speed-row">
+                    <input id="voiceSpeed" type="range" min="0.8" max="1.5" step="0.1" value="1.0" list="voiceSpeedMarks" />
+                  </div>
+                </div>
+                <div>
+                  <label>标题样式</label>
+                  <select id="titleStyle">
+                    <option>智能推荐样式</option>
+                    <option>不要标题</option>
+                    <option>痛点钩子标题</option>
+                    <option>反差悬念标题</option>
+                    <option>数字清单标题</option>
+                    <option>同城场景标题</option>
+                    <option>避坑提醒标题</option>
+                    <option>结果承诺标题</option>
+                    <option>真实测评标题</option>
+                    <option>团购成交标题</option>
+                  </select>
+                  <p id="titleTemplateHint" class="field-hint title-template-hint"></p>
+                </div>
+                <div class="hidden">
+                  <select id="subtitleStyle">
+                    <option>玫红高亮字幕</option>
+                  </select>
+                </div>
+                <datalist id="voiceSpeedMarks">
+                  <option value="0.8"></option>
+                  <option value="1.0"></option>
+                  <option value="1.2"></option>
+                  <option value="1.3"></option>
+                  <option value="1.5"></option>
+                </datalist>
+              </div>
+              <label>配音文本</label>
+              <textarea id="ttsText" rows="5" placeholder="脚本生成后会自动填入"></textarea>
+              <button id="ttsBtn" class="secondary">生成配音</button>
+              <label>视频标题</label>
+              <input id="videoTitle" placeholder="脚本标题会自动填入" />
+              <label>视频脚本</label>
+              <textarea id="videoScript" rows="5" placeholder="用于成片合成"></textarea>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
 
-    async function generateReview(mode = "generate") {
-      if (!state.selected.length || isGenerating) return;
+  <div id="finishedPreviewModal" class="finished-preview-modal hidden">
+    <div class="finished-preview-backdrop" data-close-finished-preview></div>
+    <div class="finished-preview-dialog">
+      <button class="modal-close" type="button" data-close-finished-preview>×</button>
+      <h3 id="finishedPreviewTitle">成片预览</h3>
+      <video id="finishedPreviewVideo" controls playsinline></video>
+    </div>
+  </div>
 
-      const isRetry = mode === "retry";
-      if (isRetry && state.retryUsed >= CONFIG.maxRetries) {
-        showToast("本次最多换 3 篇，刷新后可重新生成");
-        updateRetryButton(false);
-        return;
-      }
-      if (isRetry) state.retryUsed += 1;
-
-      setGenerating(true, isRetry);
-      if (isRetry && state.result) resultText.classList.add("is-refreshing");
-
-      try {
-        if (hasApiProxy) {
-          const generated = await requestDeepSeekReview(mode, createReviewVariation());
-          state.result = generated.review;
-          state.source = "deepseek";
-          rememberReview(generated.review);
-          showToast(isRetry ? "DeepSeek已换一篇" : "DeepSeek已生成");
-        } else {
-          throw new Error("DeepSeek API unavailable");
-        }
-        saveState();
-        updateUI();
-      } catch (error) {
-        console.warn("DeepSeek review generation failed.", error);
-        state.source = "error";
-        saveState();
-        updateUI();
-        showToast("DeepSeek生成失败，请稍后再试");
-      } finally {
-        setGenerating(false, isRetry);
-        if (state.result) {
-          resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          pulseCopyButton();
-        }
-      }
-    }
-
-    async function requestDeepSeekReview(mode, variation) {
-      const response = await fetch(getApiUrl("/api/generate-review"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandName: CONFIG.brandName,
-          selected: state.selected,
-          previousReview: mode === "retry" ? state.result : "",
-          reviewHistory: getReviewHistory(mode),
-          variationSeed: variation.seed,
-          variationProfile: variation.profile,
-          mode
-        })
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.message || "DeepSeek API unavailable");
-      }
-      if (!payload.review || typeof payload.review !== "string") {
-        throw new Error("DeepSeek response missing review text");
-      }
-      return payload;
-    }
-
-    function createReviewVariation() {
-      const counter = Number(state.variationCounter || 0) + 1;
-      state.variationCounter = counter;
-      const base = `${Date.now()}-${counter}-${state.selected.join("|")}`;
-      let score = 0;
-      for (let i = 0; i < base.length; i += 1) score += base.charCodeAt(i);
-      const profile = CONFIG.reviewVariations[score % CONFIG.reviewVariations.length];
-      return {
-        seed: `${base}-${Math.random().toString(36).slice(2, 8)}`,
-        profile
-      };
-    }
-
-    function getReviewHistory(mode) {
-      const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
-      const current = mode === "retry" && state.result ? [state.result] : [];
-      return [...history, ...current].slice(-6);
-    }
-
-    function rememberReview(review) {
-      const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
-      state.reviewHistory = [...history, review].slice(-6);
-    }
-
-    function getApiUrl(path) {
-      return hasLocalApiProxy ? path : `${publicApiBaseUrl}${path}`;
-    }
-
-    function setGenerating(active, isRetry) {
-      isGenerating = active;
-      generateBtn.disabled = active || state.selected.length === 0;
-      retryBtn.disabled = active || getRetryRemaining() <= 0;
-      copyBtn.disabled = active;
-
-      generateBtn.classList.toggle("is-loading", active && !isRetry);
-      retryBtn.classList.toggle("is-loading", active && isRetry);
-      resultText.classList.toggle("is-refreshing", active && isRetry && Boolean(state.result));
-
-      generateBtn.textContent = active && !isRetry ? "生成中..." : "生成我的好评";
-      updateRetryButton(active && isRetry);
-    }
-
-    function getRetryRemaining() {
-      return Math.max(0, CONFIG.maxRetries - state.retryUsed);
-    }
-
-    function updateRetryButton(isLoading) {
-      if (isLoading) {
-        retryBtn.textContent = `换一篇中...`;
-        return;
-      }
-      const remaining = getRetryRemaining();
-      retryBtn.textContent = remaining > 0 ? `换一篇（剩${remaining}）` : "换一篇已用完";
-      retryBtn.disabled = isGenerating || remaining <= 0;
-      retryBtn.title = remaining > 0 ? `本次还可以换 ${remaining} 篇` : "本次最多换 3 篇，刷新后可重新生成";
-    }
-
-    function getSourceNote() {
-      if (state.source === "deepseek") return "文案已由 DeepSeek API 根据已选项目知识生成。";
-      return "专属文案只通过 DeepSeek API 实时生成；接口不可用时会直接生成失败。";
-    }
-
-    function pulseCopyButton() {
-      copyBtn.classList.remove("pulse");
-      void copyBtn.offsetWidth;
-      copyBtn.classList.add("pulse");
-      window.setTimeout(() => copyBtn.classList.remove("pulse"), 2600);
-    }
-
-    async function copyReview(message) {
-      const text = resultText.textContent.trim();
-      if (!text) {
-        showToast("先生成文案");
-        return;
-      }
-
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(text);
-          showToast(message);
-          return;
-        } catch (e) {}
-      }
-
-      if (copySync(text)) {
-        showToast(message);
-        return;
-      }
-
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text)
-          .then(() => showToast(message))
-          .catch(() => showToast("请长按文案手动复制"));
-      } else {
-        showToast("请长按文案手动复制");
-      }
-    }
-
-    function copySync(text) {
-      const el = document.createElement("textarea");
-      el.value = text;
-      el.setAttribute("readonly", "");
-      el.style.cssText = "position:fixed;top:0;left:0;width:1em;height:1em;font-size:16px;opacity:0;pointer-events:none;";
-      document.body.appendChild(el);
-      let ok = false;
-      try {
-        const prev = document.activeElement;
-        el.focus();
-        el.setSelectionRange(0, text.length);
-        ok = document.execCommand("copy");
-        if (prev && prev.focus) prev.focus();
-      } catch (e) {}
-      document.body.removeChild(el);
-      return ok;
-    }
-
-    function saveState() {
-      try {
-        localStorage.setItem(CONFIG.storageKey, JSON.stringify({
-          selected: state.selected,
-          result: state.result,
-          source: state.source,
-          retryUsed: state.retryUsed,
-          reviewHistory: state.reviewHistory,
-          variationCounter: state.variationCounter,
-          ts: Date.now()
-        }));
-      } catch (e) {}
-    }
-
-    function restoreState() {
-      try {
-        const raw = localStorage.getItem(CONFIG.storageKey);
-        if (!raw) return;
-        const saved = JSON.parse(raw);
-        if (!saved.ts || Date.now() - saved.ts > 24 * 60 * 60 * 1000) return;
-        const validServices = new Set(CONFIG.categories.flatMap(cat => cat.items));
-        const serviceAliases = new Map([
-          ["春水光｜抗敏感修护", "春水光｜强韧抗敏"],
-          ["夏水光｜祛痘消痘印", "夏水光｜净痘控油"],
-          ["秋水光｜提亮亮白", "秋水光｜提亮补水"]
-        ]);
-        const savedSelected = Array.isArray(saved.selected) ? saved.selected : [];
-        const normalizedSelected = savedSelected.map(service => serviceAliases.get(service) || service);
-        state.selected = normalizedSelected
-          .filter(service => validServices.has(service))
-          .slice(0, CONFIG.maxServices);
-        const selectionUnchanged = normalizedSelected.every((service, index) => service === savedSelected[index]);
-        state.result = state.selected.length === savedSelected.length && selectionUnchanged ? (saved.result || "") : "";
-        state.source = saved.source === "deepseek" && state.result ? saved.source : "local";
-        if (state.source !== "deepseek") state.result = "";
-        state.retryUsed = Number(saved.retryUsed || 0);
-        state.reviewHistory = Array.isArray(saved.reviewHistory) ? saved.reviewHistory.filter(Boolean).slice(-6) : [];
-        state.variationCounter = Number(saved.variationCounter || 0);
-      } catch (e) {}
-    }
-
-    function showToast(message) {
-      toast.textContent = message;
-      toast.classList.add("show");
-      window.clearTimeout(showToast.timer);
-      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2300);
-    }
-
-    init();
-  </script>
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js?v=20260727-voice-speed"></script>
 </body>
 </html>
