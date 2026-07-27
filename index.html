@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260724-upload-hook" />
+  <link rel="stylesheet" href="styles.css?v=20260727-account-login" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -13,13 +13,18 @@
         <div class="brand-mark">AI 视频工厂</div>
         <h1>本地商家专属 · 视频生产驾驶舱</h1>
         <p>从门店定位、脚本、镜头素材到成片导出，一步步把短视频做出来。</p>
+        <div class="login-mode-tabs" aria-label="登录入口">
+          <button class="active" type="button" data-login-preset="client">客户登录</button>
+          <button type="button" data-login-preset="admin">管理员登录</button>
+        </div>
+        <div class="login-role-note" id="loginRoleNote">客户入口只保留日常使用流程，适合发给商家试用。</div>
         <label>账号</label>
-        <input id="loginUsername" value="admin" autocomplete="username" />
+        <input id="loginUsername" value="client01" autocomplete="username" />
         <label>密码</label>
-        <input id="loginPassword" value="admin123" type="password" autocomplete="current-password" />
+        <input id="loginPassword" value="client123" type="password" autocomplete="current-password" />
         <button id="loginBtn" class="primary full">进入工作台</button>
         <div id="loginError" class="error"></div>
-        <div class="hint">测试账号：admin/admin123，demo01/demo123</div>
+        <div class="hint">客户体验：client01/client123；管理员：admin/admin123</div>
       </div>
     </div>
   </div>
@@ -624,7 +629,7 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="config.js?v=20260727-aliyun-api-live"></script>
-  <script src="app.js?v=20260727-aliyun-api-live"></script>
+  <script src="config.js?v=20260727-account-login"></script>
+  <script src="app.js?v=20260727-account-login"></script>
 </body>
 </html>
