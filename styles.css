@@ -529,6 +529,11 @@ button:hover { filter: brightness(1.08); }
   border-radius: 10px;
 }
 
+.account-row-actions .danger-action {
+  border-color: rgba(255, 93, 136, .55);
+  color: #ff9ab8;
+}
+
 .app.sidebar-collapsed .sidebar {
   padding: 34px 16px 22px;
   align-items: center;
