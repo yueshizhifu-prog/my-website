@@ -1,5 +1,5 @@
 const state = {
-  token: localStorage.getItem("aivf_token") || "",
+  token: sessionStorage.getItem("aivf_token") || "",
   sidebarCollapsed: localStorage.getItem("aivf_sidebar_collapsed") === "1",
   user: null,
   assets: [],
@@ -19,6 +19,7 @@ const state = {
   activeTemplateCategory: "同城短视频",
   shots: [],
 };
+localStorage.removeItem("aivf_token");
 
 const $ = (id) => document.getElementById(id);
 const apiSearchParam = new URLSearchParams(location.search).get("api");
@@ -454,6 +455,8 @@ function showApp() {
 function showLogin() {
   $("loginView").classList.remove("hidden");
   $("appView").classList.add("hidden");
+  if ($("loginUsername")) $("loginUsername").value = "";
+  if ($("loginPassword")) $("loginPassword").value = "";
 }
 
 function getWorkspaceDraftKey() {
@@ -836,7 +839,8 @@ async function login() {
     });
     state.token = data.token;
     setCurrentUser(data.user);
-    localStorage.setItem("aivf_token", state.token);
+    localStorage.removeItem("aivf_token");
+    sessionStorage.setItem("aivf_token", state.token);
     showApp();
     await bootstrap();
   } catch (err) {
@@ -883,6 +887,7 @@ async function restoreSession() {
     await bootstrap();
   } catch {
     localStorage.removeItem("aivf_token");
+    sessionStorage.removeItem("aivf_token");
     state.token = "";
     showLogin();
   }
@@ -3380,6 +3385,7 @@ function bindActions() {
   $("logoutBtn").addEventListener("click", () => {
     saveWorkspaceDraftNow();
     localStorage.removeItem("aivf_token");
+    sessionStorage.removeItem("aivf_token");
     state.token = "";
     showLogin();
   });
