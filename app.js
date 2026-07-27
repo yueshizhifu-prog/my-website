@@ -553,7 +553,7 @@ function restoreWorkspaceDraft() {
     }
     if ($("scriptDossierState") && draft.scriptDossierState) $("scriptDossierState").textContent = draft.scriptDossierState;
     if ($("modelBadge") && draft.modelBadge) $("modelBadge").textContent = draft.modelBadge;
-    if ($("exportStatus") && draft.exportStatus) $("exportStatus").textContent = draft.exportStatus;
+    if ($("exportStatus") && draft.exportStatus) setExportStatus(draft.exportStatus, "idle");
     renderTopicIdeas(state.scriptTopicOptions);
     renderTopicChoiceBar();
     if (state.shots.length) {
@@ -572,6 +572,14 @@ function restoreWorkspaceDraft() {
 function clearCurrentWorkspaceDraft() {
   if (!state.user) return;
   localStorage.removeItem(getWorkspaceDraftKey());
+}
+
+function setExportStatus(message, status = "idle") {
+  const el = $("exportStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove("is-idle", "is-running", "is-done", "is-error");
+  el.classList.add(`is-${status}`);
 }
 
 function getAccountFormPayload() {
@@ -1385,6 +1393,7 @@ function startEditProgress() {
     const activeIndex = Math.min(steps.length - 1, Math.floor((safeValue / 100) * steps.length));
     if (text) text.textContent = messages[activeIndex] || messages[messages.length - 1];
     steps.forEach((step, index) => {
+      step.classList.toggle("done", index < activeIndex);
       step.classList.toggle("active", index === activeIndex);
     });
   };
@@ -1407,10 +1416,17 @@ function stopEditProgress(success = true) {
   if (success) {
     if (bar) bar.style.width = "100%";
     if (text) text.textContent = "成片已生成，正在打开成品库存。";
+    Array.from($("editProgressSteps")?.querySelectorAll("em") || []).forEach((step) => {
+      step.classList.add("done");
+      step.classList.remove("active");
+    });
     setTimeout(() => overlay.classList.add("hidden"), 900);
   } else {
     overlay.classList.add("hidden");
     if (bar) bar.style.width = "8%";
+    Array.from($("editProgressSteps")?.querySelectorAll("em") || []).forEach((step) => {
+      step.classList.remove("done", "active");
+    });
   }
 }
 
@@ -2982,7 +2998,7 @@ function syncExportFields() {
 
 async function generateTts() {
   if (staticPreviewMode) {
-    $("exportStatus").textContent = staticPreviewMessage;
+    setExportStatus(staticPreviewMessage, "error");
     toast(staticPreviewMessage);
     return;
   }
@@ -2994,7 +3010,7 @@ async function generateTts() {
     toast("先生成或填写配音文本");
     return;
   }
-  $("exportStatus").textContent = "配音生成中...";
+  setExportStatus("配音生成中...", "running");
   const data = await api("/api/tts", {
     method: "POST",
     body: JSON.stringify({
@@ -3003,7 +3019,7 @@ async function generateTts() {
       voiceSpeed: getSelectedVoiceSpeed(),
     }),
   });
-  $("exportStatus").textContent = "配音已生成，可以继续生成成片";
+  setExportStatus("配音已生成，可以继续生成成片", "done");
   state.lastRender = data.job;
   renderLatestExport();
   scheduleWorkspaceDraftSave();
@@ -3021,14 +3037,14 @@ function blobToDataUrl(blob) {
 
 async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
   if (!text || !voiceId) return null;
-  $("exportStatus").textContent = "克隆音色配音生成中...";
+  setExportStatus("克隆音色配音生成中...", "running");
   const ttsData = await api("/api/tts", {
     method: "POST",
     body: JSON.stringify({ text, voiceId, voiceSpeed }),
   });
   const outputUrl = ttsData?.job?.outputUrl;
   if (!outputUrl) return null;
-  $("exportStatus").textContent = "配音已生成，正在加入剪辑...";
+  setExportStatus("配音已生成，正在加入剪辑...", "running");
   const response = await fetch(outputUrl);
   if (!response.ok) throw new Error("配音文件读取失败");
   const blob = await response.blob();
@@ -3049,7 +3065,7 @@ async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
 
 async function generateVideo() {
   if (staticPreviewMode) {
-    $("exportStatus").textContent = staticPreviewMessage;
+    setExportStatus(staticPreviewMessage, "error");
     toast(staticPreviewMessage);
     return false;
   }
@@ -3066,9 +3082,16 @@ async function generateVideo() {
     toast("先生成或填写视频脚本");
     return false;
   }
+  const videoButton = $("videoBtn");
+  const previousVideoButtonText = videoButton?.textContent || "";
+  if (videoButton) {
+    videoButton.disabled = true;
+    videoButton.textContent = "生成中...";
+  }
+  try {
   const lipSyncMode = "off";
   const recommendedTitleStyle = getRecommendedTitleStyle();
-  $("exportStatus").textContent = "成片任务处理中：正在生成配音和自动剪辑...";
+  setExportStatus("成片任务处理中：正在生成配音和自动剪辑...", "running");
   const voiceId = getSelectedVoiceId();
   const voiceSpeed = getSelectedVoiceSpeed();
   let assetIds = getRenderAssetIdsForShots();
@@ -3082,7 +3105,7 @@ async function generateVideo() {
       toast(`配音生成失败，先生成无配音视频：${error.message}`);
     }
   }
-  $("exportStatus").textContent = "成片合成中，请保持页面打开...";
+  setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
     title,
     script: voiceoverText,
@@ -3104,10 +3127,19 @@ async function generateVideo() {
     body: JSON.stringify(payload),
   });
   state.lastRender = data.job;
-  $("exportStatus").textContent = data.job.status === "done" ? "成片已生成，可以下载" : "成片生成失败";
+  setExportStatus(data.job.status === "done" ? "成片已生成，可以下载" : "成片生成失败", data.job.status === "done" ? "done" : "error");
   renderLatestExport();
   toast(data.job.status === "done" ? "视频已生成" : "视频生成失败");
   return data.job.status === "done";
+  } catch (error) {
+    setExportStatus(`成片生成失败：${error.message}`, "error");
+    throw error;
+  } finally {
+    if (videoButton) {
+      videoButton.disabled = false;
+      videoButton.textContent = previousVideoButtonText || "生成演示成片";
+    }
+  }
 }
 
 function getRenderAssetIdsForShots() {
@@ -3205,14 +3237,13 @@ function renderLatestExport() {
   if (!container) return;
   const jobs = getFinishedJobs();
   updateFinishedToolbar(jobs);
+  container.classList.toggle("is-empty", !jobs.length);
   if (!jobs.length) {
-    container.innerHTML = `<div class="finished-video-card">
-      <div class="finished-video-preview">
-        <div class="finished-video-empty">还没有成片<br>完成剪辑后会自动保存到这里</div>
-      </div>
-      <div class="finished-video-body">
-        <h3>等待生成成片</h3>
-        <div class="meta">点击剪辑页“一键成品剪辑”后，这里会展示成品效果。</div>
+    container.innerHTML = `<div class="finished-empty-state">
+      <div>
+        <div class="finished-empty-icon">4</div>
+        <h3>还没有生成成片</h3>
+        <p>完成脚本分镜和素材匹配后，点击剪辑页“一键成品剪辑”。成片生成完成后会自动进入这里，支持预览、下载和删除。</p>
       </div>
     </div>`;
     return;
