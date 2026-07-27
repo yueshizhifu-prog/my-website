@@ -412,6 +412,18 @@ function staticPreviewApi(path, options = {}) {
     saveStaticAccounts(accounts);
     return Promise.resolve({ ok: true, account: publicAccount(next), accounts: accounts.map(publicAccount) });
   }
+  if (path === "/api/accounts/delete" && method === "POST") {
+    if (state.user?.role !== "admin") throw new Error("只有管理员可以删除账号");
+    const accountId = String(payload.id || "").trim();
+    if (!accountId) throw new Error("缺少账号 ID");
+    if (accountId === state.user?.id) throw new Error("不能删除当前登录的管理员账号");
+    const accounts = getStaticAccounts();
+    const account = accounts.find((item) => item.id === accountId);
+    if (!account) throw new Error("账号不存在");
+    const nextAccounts = accounts.filter((item) => item.id !== accountId);
+    saveStaticAccounts(nextAccounts);
+    return Promise.resolve({ ok: true, deleted: accountId, accounts: nextAccounts.map(publicAccount) });
+  }
   if (path === "/api/health") {
     return Promise.resolve({ ok: true, name: "GitHub Pages 静态预览版" });
   }
@@ -619,7 +631,9 @@ function renderAccountList() {
     list.innerHTML = `<div class="hint">还没有加载账号，点击刷新。</div>`;
     return;
   }
-  list.innerHTML = state.accounts.map((account) => `
+  list.innerHTML = state.accounts.map((account) => {
+    const isCurrentUser = account.id === state.user?.id;
+    return `
     <div class="account-row">
       <strong>${escapeHtml(account.username || "-")}<br><span>${escapeHtml(roleLabel(account.role))}</span></strong>
       <span>${escapeHtml(account.phone || "未设置手机号")}</span>
@@ -628,9 +642,11 @@ function renderAccountList() {
       <div class="account-row-actions">
         <button class="ghost small" type="button" data-edit-account-id="${escapeHtml(account.id)}">编辑</button>
         <button class="ghost small" type="button" data-toggle-account-id="${escapeHtml(account.id)}">${account.disabled ? "启用" : "暂停"}</button>
+        ${isCurrentUser ? "" : `<button class="ghost small danger-action" type="button" data-delete-account-id="${escapeHtml(account.id)}">删除</button>`}
       </div>
     </div>
-  `).join("");
+  `;
+  }).join("");
 }
 
 async function loadAccounts() {
@@ -675,6 +691,24 @@ async function toggleAccount(accountId) {
   state.accounts = Array.isArray(data.accounts) ? data.accounts : state.accounts;
   renderAccountSettings();
   toast(account.disabled ? "账号已启用" : "账号已暂停");
+}
+
+async function deleteAccount(accountId) {
+  const account = state.accounts.find((item) => item.id === accountId);
+  if (!account) return;
+  if (account.id === state.user?.id) {
+    toast("不能删除当前登录账号");
+    return;
+  }
+  const confirmed = window.confirm(`确定删除账号「${account.username}」吗？删除后这个账号将不能登录。`);
+  if (!confirmed) return;
+  const data = await api("/api/accounts/delete", {
+    method: "POST",
+    body: JSON.stringify({ id: accountId }),
+  });
+  state.accounts = Array.isArray(data.accounts) ? data.accounts : state.accounts.filter((item) => item.id !== accountId);
+  renderAccountSettings();
+  toast("账号已删除");
 }
 
 function switchTab(tabId) {
@@ -3443,6 +3477,11 @@ function bindActions() {
     const toggleAccountBtn = event.target.closest("[data-toggle-account-id]");
     if (toggleAccountBtn) {
       toggleAccount(toggleAccountBtn.dataset.toggleAccountId).catch((e) => toast(e.message));
+      return;
+    }
+    const deleteAccountBtn = event.target.closest("[data-delete-account-id]");
+    if (deleteAccountBtn) {
+      deleteAccount(deleteAccountBtn.dataset.deleteAccountId).catch((e) => toast(e.message));
       return;
     }
     const selectAssetBtn = event.target.closest("[data-select-asset-id]");
