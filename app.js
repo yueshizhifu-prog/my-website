@@ -15,18 +15,23 @@ const state = {
   progressTimers: {},
   scriptTopicOptions: [],
   selectedTopicIndex: 0,
-  activeTemplateCategory: "同城短视频",
+  activeTemplateCategory: "鍚屽煄鐭棰?,
   shots: [],
 };
 
 const $ = (id) => document.getElementById(id);
-const staticPreviewMode = location.hostname.endsWith(".github.io");
-const staticPreviewMessage = "当前是 GitHub Pages 静态预览版，只能进入页面预览；登录、上传、AI 生成、配音和剪视频需要连接后端服务。";
+const apiSearchParam = new URLSearchParams(location.search).get("api");
+if (apiSearchParam) {
+  localStorage.setItem("aivf_api_base_url", apiSearchParam.trim().replace(/\/+$/, ""));
+}
+const configuredApiBaseUrl = String(window.AIVF_API_BASE_URL || localStorage.getItem("aivf_api_base_url") || "").trim().replace(/\/+$/, "");
+const staticPreviewMode = location.hostname.endsWith(".github.io") && !configuredApiBaseUrl;
+const staticPreviewMessage = "褰撳墠鏄?GitHub Pages 闈欐€侀瑙堢増锛屽彧鑳借繘鍏ラ〉闈㈤瑙堬紱鐧诲綍銆佷笂浼犮€丄I 鐢熸垚銆侀厤闊冲拰鍓棰戦渶瑕佽繛鎺ュ悗绔湇鍔°€?;
 
 const researchRegenerateLimit = 3;
 const researchRegenerateWindowMs = 5 * 60 * 1000;
 const researchRegenerateStorageKey = "aivf_research_regen_window";
-const topicNumberLabels = ["一", "二", "三", "四", "五"];
+const topicNumberLabels = ["涓€", "浜?, "涓?, "鍥?, "浜?];
 const assetGroupStorageKey = "aivf_asset_groups";
 const assetQuotaBytes = 5 * 1024 * 1024 * 1024;
 const workspaceDraftVersion = 1;
@@ -80,122 +85,122 @@ let isRestoringWorkspaceDraft = false;
 let editProgressTimer = null;
 
 const defaultAssetGroups = [
-  { id: "ungrouped", name: "未分组", locked: true },
+  { id: "ungrouped", name: "鏈垎缁?, locked: true },
 ];
 
 const requiredDossierFields = [
-  ["storeIndustry", "您的行业是什么"],
-  ["brandName", "您的店名/品牌名"],
-  ["storeCity", "门店所在的城市"],
-  ["storeLocation", "门店位置简单描述"],
-  ["personaName", "短视频中的自我称呼"],
-  ["personaAge", "您的年龄"],
-  ["personaGender", "您的性别"],
-  ["businessYears", "行业/门店年限"],
-  ["hometown", "您自己是哪里人"],
+  ["storeIndustry", "鎮ㄧ殑琛屼笟鏄粈涔?],
+  ["brandName", "鎮ㄧ殑搴楀悕/鍝佺墝鍚?],
+  ["storeCity", "闂ㄥ簵鎵€鍦ㄧ殑鍩庡競"],
+  ["storeLocation", "闂ㄥ簵浣嶇疆绠€鍗曟弿杩?],
+  ["personaName", "鐭棰戜腑鐨勮嚜鎴戠О鍛?],
+  ["personaAge", "鎮ㄧ殑骞撮緞"],
+  ["personaGender", "鎮ㄧ殑鎬у埆"],
+  ["businessYears", "琛屼笟/闂ㄥ簵骞撮檺"],
+  ["hometown", "鎮ㄨ嚜宸辨槸鍝噷浜?],
 ];
 
 const localAudienceAgeMap = {
-  "人群不限": { label: "不限", min: null, max: null },
-  "Z 世代": { label: "18-23 岁", min: 18, max: 23 },
-  "新锐白领": { label: "24-30 岁", min: 24, max: 30 },
-  "精致妈妈": { label: "25-40 岁", min: 25, max: 40 },
-  "资深中产": { label: "31-50 岁", min: 31, max: 50 },
-  "都市蓝领": { label: "24-45 岁", min: 24, max: 45 },
-  "小镇青年": { label: "18-23 岁", min: 18, max: 23 },
-  "小镇中老年": { label: "41-60 岁", min: 41, max: 60 },
-  "都市银发": { label: "60 岁以上", min: 60, max: null },
+  "浜虹兢涓嶉檺": { label: "涓嶉檺", min: null, max: null },
+  "Z 涓栦唬": { label: "18-23 宀?, min: 18, max: 23 },
+  "鏂伴攼鐧介": { label: "24-30 宀?, min: 24, max: 30 },
+  "绮捐嚧濡堝": { label: "25-40 宀?, min: 25, max: 40 },
+  "璧勬繁涓骇": { label: "31-50 宀?, min: 31, max: 50 },
+  "閮藉競钃濋": { label: "24-45 宀?, min: 24, max: 45 },
+  "灏忛晣闈掑勾": { label: "18-23 宀?, min: 18, max: 23 },
+  "灏忛晣涓€佸勾": { label: "41-60 宀?, min: 41, max: 60 },
+  "閮藉競閾跺彂": { label: "60 宀佷互涓?, min: 60, max: null },
 };
 
 const workspaceCopy = {
   researchTab: {
-    title: "调研档案",
-    subtitle: "先让系统理解你是谁、店铺情况和当前卡点。"
+    title: "璋冪爺妗ｆ",
+    subtitle: "鍏堣绯荤粺鐞嗚В浣犳槸璋併€佸簵閾烘儏鍐靛拰褰撳墠鍗＄偣銆?
   },
   scriptTab: {
-    title: "脚本",
-    subtitle: "基于调研结果，生成流量、同城或团单短视频的文案和分镜。"
+    title: "鑴氭湰",
+    subtitle: "鍩轰簬璋冪爺缁撴灉锛岀敓鎴愭祦閲忋€佸悓鍩庢垨鍥㈠崟鐭棰戠殑鏂囨鍜屽垎闀溿€?
   },
   libraryTab: {
-    title: "视频库",
-    subtitle: "集中管理口播、门店环境、项目过程、顾客反馈、产品图和声音样本。"
+    title: "瑙嗛搴?,
+    subtitle: "闆嗕腑绠＄悊鍙ｆ挱銆侀棬搴楃幆澧冦€侀」鐩繃绋嬨€侀【瀹㈠弽棣堛€佷骇鍝佸浘鍜屽０闊虫牱鏈€?
   },
   editorTab: {
-    title: "剪辑",
-    subtitle: "把文案分镜按镜头导入，再匹配视频库素材形成混剪结构。"
+    title: "鍓緫",
+    subtitle: "鎶婃枃妗堝垎闀滄寜闀滃ご瀵煎叆锛屽啀鍖归厤瑙嗛搴撶礌鏉愬舰鎴愭贩鍓粨鏋勩€?
   },
   exportTab: {
-    title: "成品素材库",
-    subtitle: "像素材视频库一样保存成片效果，方便预览、下载和复用。"
+    title: "鎴愬搧绱犳潗搴?,
+    subtitle: "鍍忕礌鏉愯棰戝簱涓€鏍蜂繚瀛樻垚鐗囨晥鏋滐紝鏂逛究棰勮銆佷笅杞藉拰澶嶇敤銆?
   }
 };
 
 const templateLibrary = {
-  "流量短视频": [
+  "娴侀噺鐭棰?: [
     {
       id: "traffic-video",
-      name: "流量短视频",
-      content: "底层逻辑：流量的本质是人性。先过人脑筛选，再过平台筛选。\n思考框架：对象锚定 → 七情六欲点火 → 黄金 5 秒停留 → 场景承接 → 信任筛选 → 动作着陆。\n选题方向：反常识、被坑避雷、怕错过、怕掉队、轻松获得、替用户表达不满、老板真实观点。\n输出要求：先给 3-5 个选题，再选 1 个生成文案 + 分镜；口播每个短句尽量 8-12 字，少用逗号，开头必须有情绪张力。"
+      name: "娴侀噺鐭棰?,
+      content: "搴曞眰閫昏緫锛氭祦閲忕殑鏈川鏄汉鎬с€傚厛杩囦汉鑴戠瓫閫夛紝鍐嶈繃骞冲彴绛涢€夈€俓n鎬濊€冩鏋讹細瀵硅薄閿氬畾 鈫?涓冩儏鍏鐐圭伀 鈫?榛勯噾 5 绉掑仠鐣?鈫?鍦烘櫙鎵挎帴 鈫?淇′换绛涢€?鈫?鍔ㄤ綔鐫€闄嗐€俓n閫夐鏂瑰悜锛氬弽甯歌瘑銆佽鍧戦伩闆枫€佹€曢敊杩囥€佹€曟帀闃熴€佽交鏉捐幏寰椼€佹浛鐢ㄦ埛琛ㄨ揪涓嶆弧銆佽€佹澘鐪熷疄瑙傜偣銆俓n杈撳嚭瑕佹眰锛氬厛缁?3-5 涓€夐锛屽啀閫?1 涓敓鎴愭枃妗?+ 鍒嗛暅锛涘彛鎾瘡涓煭鍙ュ敖閲?8-12 瀛楋紝灏戠敤閫楀彿锛屽紑澶村繀椤绘湁鎯呯华寮犲姏銆?
     }
   ],
-  "同城短视频": [
+  "鍚屽煄鐭棰?: [
     {
       id: "local-city-video",
-      name: "同城短视频",
-      content: "底层逻辑：同城不是只讲行业，而是用城市生活、天气、商圈、消费习惯、人群情绪等泛垂直内容圈住附近的人。\n思考框架：先选人群和年龄，再结合城市与门店档案，找到这个群体会停留、会共鸣、会到店的切口。\n选题方向：城市天气、附近生活、下班场景、家庭关系、聚会饭局、精致生活、避坑、省钱、松弛感。\n输出要求：必须结合已选人群和年龄范围，先给破圈选题，再生成内容 + 分镜；口播短句尽量 8-12 字，少打逗号。"
+      name: "鍚屽煄鐭棰?,
+      content: "搴曞眰閫昏緫锛氬悓鍩庝笉鏄彧璁茶涓氾紝鑰屾槸鐢ㄥ煄甯傜敓娲汇€佸ぉ姘斻€佸晢鍦堛€佹秷璐逛範鎯€佷汉缇ゆ儏缁瓑娉涘瀭鐩村唴瀹瑰湀浣忛檮杩戠殑浜恒€俓n鎬濊€冩鏋讹細鍏堥€変汉缇ゅ拰骞撮緞锛屽啀缁撳悎鍩庡競涓庨棬搴楁。妗堬紝鎵惧埌杩欎釜缇や綋浼氬仠鐣欍€佷細鍏遍福銆佷細鍒板簵鐨勫垏鍙ｃ€俓n閫夐鏂瑰悜锛氬煄甯傚ぉ姘斻€侀檮杩戠敓娲汇€佷笅鐝満鏅€佸搴叧绯汇€佽仛浼氶キ灞€銆佺簿鑷寸敓娲汇€侀伩鍧戙€佺渷閽便€佹澗寮涙劅銆俓n杈撳嚭瑕佹眰锛氬繀椤荤粨鍚堝凡閫変汉缇ゅ拰骞撮緞鑼冨洿锛屽厛缁欑牬鍦堥€夐锛屽啀鐢熸垚鍐呭 + 鍒嗛暅锛涘彛鎾煭鍙ュ敖閲?8-12 瀛楋紝灏戞墦閫楀彿銆?
     }
   ],
-  "团单短视频": [
+  "鍥㈠崟鐭棰?: [
     {
       id: "group-deal-video",
-      name: "团单短视频",
-      content: "底层逻辑：团单短视频不是直接吆喝便宜，而是降低决策成本。\n思考框架：谁适合 → 为什么值 → 过程是否可信 → 到店怎么用 → 现在为什么要买。\n选题方向：套餐拆解、适合/不适合人群、真实体验流程、到店避坑、限时福利、老客推荐。\n输出要求：先给 3-5 个团单转化选题，再生成文案 + 分镜；表达要具体，不硬推；口播短句尽量 8-12 字。"
+      name: "鍥㈠崟鐭棰?,
+      content: "搴曞眰閫昏緫锛氬洟鍗曠煭瑙嗛涓嶆槸鐩存帴鍚嗗枬渚垮疁锛岃€屾槸闄嶄綆鍐崇瓥鎴愭湰銆俓n鎬濊€冩鏋讹細璋侀€傚悎 鈫?涓轰粈涔堝€?鈫?杩囩▼鏄惁鍙俊 鈫?鍒板簵鎬庝箞鐢?鈫?鐜板湪涓轰粈涔堣涔般€俓n閫夐鏂瑰悜锛氬椁愭媶瑙ｃ€侀€傚悎/涓嶉€傚悎浜虹兢銆佺湡瀹炰綋楠屾祦绋嬨€佸埌搴楅伩鍧戙€侀檺鏃剁鍒┿€佽€佸鎺ㄨ崘銆俓n杈撳嚭瑕佹眰锛氬厛缁?3-5 涓洟鍗曡浆鍖栭€夐锛屽啀鐢熸垚鏂囨 + 鍒嗛暅锛涜〃杈捐鍏蜂綋锛屼笉纭帹锛涘彛鎾煭鍙ュ敖閲?8-12 瀛椼€?
     }
   ]
 };
 
 const titleTemplateLibrary = {
-  "智能推荐样式": "系统按当前系列自动挑标题：流量优先痛点/反差，同城优先城市场景，团单优先成交理由。",
-  "不要标题": "成片不叠加顶部 AI 标题，只保留口播字幕。",
-  "痛点钩子标题": "模板：在{城市}，别再为{痛点}花冤枉钱。适合先抓客户正在担心的问题。",
-  "反差悬念标题": "模板：看起来普通的{服务}，为什么{人群}都来？适合制造好奇和停留。",
-  "数字清单标题": "模板：{城市}{人群}必看的3个{选择标准}。适合避坑、收藏、转发。",
-  "同城场景标题": "模板：{城市}{场景}后，我发现{门店价值}。适合同城泛垂直破圈。",
-  "避坑提醒标题": "模板：第一次做{服务}，先避开这3个坑。适合教育用户、建立信任。",
-  "结果承诺标题": "模板：想{结果}，先看这套{方法/流程}。适合从结果倒推到服务。",
-  "真实测评标题": "模板：我用{真实场景}测了一下{服务}。适合门店过程、体验、反馈内容。",
-  "团购成交标题": "模板：{套餐/价格}值不值？看完再决定。适合团单、套餐、转化视频。"
+  "鏅鸿兘鎺ㄨ崘鏍峰紡": "绯荤粺鎸夊綋鍓嶇郴鍒楄嚜鍔ㄦ寫鏍囬锛氭祦閲忎紭鍏堢棝鐐?鍙嶅樊锛屽悓鍩庝紭鍏堝煄甯傚満鏅紝鍥㈠崟浼樺厛鎴愪氦鐞嗙敱銆?,
+  "涓嶈鏍囬": "鎴愮墖涓嶅彔鍔犻《閮?AI 鏍囬锛屽彧淇濈暀鍙ｆ挱瀛楀箷銆?,
+  "鐥涚偣閽╁瓙鏍囬": "妯℃澘锛氬湪{鍩庡競}锛屽埆鍐嶄负{鐥涚偣}鑺卞啢鏋夐挶銆傞€傚悎鍏堟姄瀹㈡埛姝ｅ湪鎷呭績鐨勯棶棰樸€?,
+  "鍙嶅樊鎮康鏍囬": "妯℃澘锛氱湅璧锋潵鏅€氱殑{鏈嶅姟}锛屼负浠€涔坽浜虹兢}閮芥潵锛熼€傚悎鍒堕€犲ソ濂囧拰鍋滅暀銆?,
+  "鏁板瓧娓呭崟鏍囬": "妯℃澘锛歿鍩庡競}{浜虹兢}蹇呯湅鐨?涓獅閫夋嫨鏍囧噯}銆傞€傚悎閬垮潙銆佹敹钘忋€佽浆鍙戙€?,
+  "鍚屽煄鍦烘櫙鏍囬": "妯℃澘锛歿鍩庡競}{鍦烘櫙}鍚庯紝鎴戝彂鐜皗闂ㄥ簵浠峰€紏銆傞€傚悎鍚屽煄娉涘瀭鐩寸牬鍦堛€?,
+  "閬垮潙鎻愰啋鏍囬": "妯℃澘锛氱涓€娆″仛{鏈嶅姟}锛屽厛閬垮紑杩?涓潙銆傞€傚悎鏁欒偛鐢ㄦ埛銆佸缓绔嬩俊浠汇€?,
+  "缁撴灉鎵胯鏍囬": "妯℃澘锛氭兂{缁撴灉}锛屽厛鐪嬭繖濂梴鏂规硶/娴佺▼}銆傞€傚悎浠庣粨鏋滃€掓帹鍒版湇鍔°€?,
+  "鐪熷疄娴嬭瘎鏍囬": "妯℃澘锛氭垜鐢▄鐪熷疄鍦烘櫙}娴嬩簡涓€涓媨鏈嶅姟}銆傞€傚悎闂ㄥ簵杩囩▼銆佷綋楠屻€佸弽棣堝唴瀹广€?,
+  "鍥㈣喘鎴愪氦鏍囬": "妯℃澘锛歿濂楅/浠锋牸}鍊间笉鍊硷紵鐪嬪畬鍐嶅喅瀹氥€傞€傚悎鍥㈠崟銆佸椁愩€佽浆鍖栬棰戙€?
 };
 
 const assetTypeLabels = {
-  talking_head: "口播视频",
-  scene: "门店环境",
-  process: "项目过程",
-  feedback: "顾客反馈",
-  product: "产品/团购图",
-  voice_sample: "声音样本",
-  bgm: "BGM 音乐",
-  image: "图片",
-  video: "视频",
-  audio: "音频",
-  document: "文档",
+  talking_head: "鍙ｆ挱瑙嗛",
+  scene: "闂ㄥ簵鐜",
+  process: "椤圭洰杩囩▼",
+  feedback: "椤惧鍙嶉",
+  product: "浜у搧/鍥㈣喘鍥?,
+  voice_sample: "澹伴煶鏍锋湰",
+  bgm: "BGM 闊充箰",
+  image: "鍥剧墖",
+  video: "瑙嗛",
+  audio: "闊抽",
+  document: "鏂囨。",
 };
 
 const assetOrder = [
-  ["talking_head", "口播视频"],
-  ["scene", "门店环境"],
-  ["process", "项目过程"],
-  ["feedback", "顾客反馈"],
-  ["product", "产品/团购图"],
-  ["bgm", "BGM 音乐"],
+  ["talking_head", "鍙ｆ挱瑙嗛"],
+  ["scene", "闂ㄥ簵鐜"],
+  ["process", "椤圭洰杩囩▼"],
+  ["feedback", "椤惧鍙嶉"],
+  ["product", "浜у搧/鍥㈣喘鍥?],
+  ["bgm", "BGM 闊充箰"],
 ];
 
 const cockpitMaterialRows = [
-  { type: "talking_head", title: "口播", subtitle: "品牌介绍/讲解", missingAction: "上传" },
-  { type: "scene", title: "门店环境", subtitle: "门头/前台/环境", missingAction: "上传" },
-  { type: "process", title: "项目过程", subtitle: "护理/操作过程", missingAction: "上传" },
-  { type: "feedback", title: "顾客反馈", subtitle: "顾客评价/见证", missingAction: "上传" },
-  { type: "bgm", title: "BGM", subtitle: "背景音乐", missingAction: "选择音乐" },
+  { type: "talking_head", title: "鍙ｆ挱", subtitle: "鍝佺墝浠嬬粛/璁茶В", missingAction: "涓婁紶" },
+  { type: "scene", title: "闂ㄥ簵鐜", subtitle: "闂ㄥご/鍓嶅彴/鐜", missingAction: "涓婁紶" },
+  { type: "process", title: "椤圭洰杩囩▼", subtitle: "鎶ょ悊/鎿嶄綔杩囩▼", missingAction: "涓婁紶" },
+  { type: "feedback", title: "椤惧鍙嶉", subtitle: "椤惧璇勪环/瑙佽瘉", missingAction: "涓婁紶" },
+  { type: "bgm", title: "BGM", subtitle: "鑳屾櫙闊充箰", missingAction: "閫夋嫨闊充箰" },
 ];
 
 state.assetGroups = [...defaultAssetGroups];
@@ -233,17 +238,18 @@ async function api(path, options = {}) {
   if (staticPreviewMode && path.startsWith("/api/")) {
     return staticPreviewApi(path, options);
   }
+  const url = path.startsWith("/api/") && configuredApiBaseUrl ? `${configuredApiBaseUrl}${path}` : path;
   const headers = { ...(options.headers || {}) };
   headers["Content-Type"] = "application/json; charset=utf-8";
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  const res = await fetch(path, { ...options, headers, body: safeJsonBody(options.body) });
+  const res = await fetch(url, { ...options, headers, body: safeJsonBody(options.body) });
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
-    throw new Error("后端服务未连接：请启动服务器后再操作");
+    throw new Error("鍚庣鏈嶅姟鏈繛鎺ワ細璇峰惎鍔ㄦ湇鍔″櫒鍚庡啀鎿嶄綔");
   }
   const data = await res.json();
   if (!res.ok || data.ok === false) {
-    throw new Error(data.error || `请求失败：${res.status}`);
+    throw new Error(data.error || `璇锋眰澶辫触锛?{res.status}`);
   }
   return data;
 }
@@ -266,27 +272,27 @@ function getStaticPreviewUser(username = "admin") {
 }
 
 function buildStaticPreviewCopy(payload = {}) {
-  const brand = payload.brandName || payload.storeIndustry || "本地门店";
-  const product = payload.mainProduct || "主推项目";
-  const city = payload.storeCity || "同城";
-  const title = `${brand}${product}到店体验`;
+  const brand = payload.brandName || payload.storeIndustry || "鏈湴闂ㄥ簵";
+  const product = payload.mainProduct || "涓绘帹椤圭洰";
+  const city = payload.storeCity || "鍚屽煄";
+  const title = `${brand}${product}鍒板簵浣撻獙`;
   const strategy = [
-    `静态预览说明：当前页面运行在 GitHub Pages，没有连接后端和大模型。`,
-    `档案方向：围绕${city}本地客户，用真实门店、真实服务过程和真实反馈建立信任。`,
-    `内容重点：先讲客户痛点，再展示${product}的服务过程，最后给出到店理由。`,
-    `正式上线后，这里会由后端调用 DeepSeek/百炼生成完整调研和脚本。`,
+    `闈欐€侀瑙堣鏄庯細褰撳墠椤甸潰杩愯鍦?GitHub Pages锛屾病鏈夎繛鎺ュ悗绔拰澶фā鍨嬨€俙,
+    `妗ｆ鏂瑰悜锛氬洿缁?{city}鏈湴瀹㈡埛锛岀敤鐪熷疄闂ㄥ簵銆佺湡瀹炴湇鍔¤繃绋嬪拰鐪熷疄鍙嶉寤虹珛淇′换銆俙,
+    `鍐呭閲嶇偣锛氬厛璁插鎴风棝鐐癸紝鍐嶅睍绀?{product}鐨勬湇鍔¤繃绋嬶紝鏈€鍚庣粰鍑哄埌搴楃悊鐢便€俙,
+    `姝ｅ紡涓婄嚎鍚庯紝杩欓噷浼氱敱鍚庣璋冪敤 DeepSeek/鐧剧偧鐢熸垚瀹屾暣璋冪爺鍜岃剼鏈€俙,
   ].join("\n");
   const script = [
-    `很多${city}客户第一次选择${brand}，最担心的不是价格，而是不知道效果靠不靠谱。`,
-    `我们会先把服务流程讲清楚，再把真实过程和注意事项拍出来。`,
-    `${product}适合想少走弯路、希望看到真实体验的人。`,
-    `如果你也在附近，可以先了解一下，再决定要不要到店。`,
+    `寰堝${city}瀹㈡埛绗竴娆￠€夋嫨${brand}锛屾渶鎷呭績鐨勪笉鏄环鏍硷紝鑰屾槸涓嶇煡閬撴晥鏋滈潬涓嶉潬璋便€俙,
+    `鎴戜滑浼氬厛鎶婃湇鍔℃祦绋嬭娓呮锛屽啀鎶婄湡瀹炶繃绋嬪拰娉ㄦ剰浜嬮」鎷嶅嚭鏉ャ€俙,
+    `${product}閫傚悎鎯冲皯璧板集璺€佸笇鏈涚湅鍒扮湡瀹炰綋楠岀殑浜恒€俙,
+    `濡傛灉浣犱篃鍦ㄩ檮杩戯紝鍙互鍏堜簡瑙ｄ竴涓嬶紝鍐嶅喅瀹氳涓嶈鍒板簵銆俙,
   ].join("\n");
   const shotPrompts = [
-    `文案：很多${city}客户第一次选择${brand}，最担心的不是价格，而是不知道效果靠不靠谱｜画面：老板或门店负责人正面口播｜素材：口播视频`,
-    `文案：我们会先把服务流程讲清楚，再把真实过程和注意事项拍出来｜画面：门店环境和服务流程细节｜素材：门店/过程素材`,
-    `文案：${product}适合想少走弯路、希望看到真实体验的人｜画面：项目成果、套餐权益或顾客反馈｜素材：产品/反馈素材`,
-    `文案：如果你也在附近，可以先了解一下，再决定要不要到店｜画面：门头、地址、引导咨询画面｜素材：门店素材`,
+    `鏂囨锛氬緢澶?{city}瀹㈡埛绗竴娆￠€夋嫨${brand}锛屾渶鎷呭績鐨勪笉鏄环鏍硷紝鑰屾槸涓嶇煡閬撴晥鏋滈潬涓嶉潬璋憋綔鐢婚潰锛氳€佹澘鎴栭棬搴楄礋璐ｄ汉姝ｉ潰鍙ｆ挱锝滅礌鏉愶細鍙ｆ挱瑙嗛`,
+    `鏂囨锛氭垜浠細鍏堟妸鏈嶅姟娴佺▼璁叉竻妤氾紝鍐嶆妸鐪熷疄杩囩▼鍜屾敞鎰忎簨椤规媿鍑烘潵锝滅敾闈細闂ㄥ簵鐜鍜屾湇鍔℃祦绋嬬粏鑺傦綔绱犳潗锛氶棬搴?杩囩▼绱犳潗`,
+    `鏂囨锛?{product}閫傚悎鎯冲皯璧板集璺€佸笇鏈涚湅鍒扮湡瀹炰綋楠岀殑浜猴綔鐢婚潰锛氶」鐩垚鏋溿€佸椁愭潈鐩婃垨椤惧鍙嶉锝滅礌鏉愶細浜у搧/鍙嶉绱犳潗`,
+    `鏂囨锛氬鏋滀綘涔熷湪闄勮繎锛屽彲浠ュ厛浜嗚В涓€涓嬶紝鍐嶅喅瀹氳涓嶈鍒板簵锝滅敾闈細闂ㄥご銆佸湴鍧€銆佸紩瀵煎挩璇㈢敾闈綔绱犳潗锛氶棬搴楃礌鏉恅,
   ];
   return {
     ok: true,
@@ -298,14 +304,14 @@ function buildStaticPreviewCopy(payload = {}) {
       strategy,
       script,
       shotPrompts,
-      tags: ["同城", "门店", "真实体验"],
+      tags: ["鍚屽煄", "闂ㄥ簵", "鐪熷疄浣撻獙"],
       topicOptions: [
         {
           title,
-          reason: "用于静态预览页面流程，正式上线后由后端大模型生成。",
+          reason: "鐢ㄤ簬闈欐€侀瑙堥〉闈㈡祦绋嬶紝姝ｅ紡涓婄嚎鍚庣敱鍚庣澶фā鍨嬬敓鎴愩€?,
           script,
           shotPrompts,
-          tags: ["同城", "门店", "真实体验"],
+          tags: ["鍚屽煄", "闂ㄥ簵", "鐪熷疄浣撻獙"],
         },
       ],
     },
@@ -319,14 +325,14 @@ function staticPreviewApi(path, options = {}) {
     const username = String(payload.username || "").trim();
     const password = String(payload.password || "");
     const valid = (username === "admin" && password === "admin123") || (username === "demo01" && password === "demo123");
-    if (!valid) throw new Error("账号或密码错误");
+    if (!valid) throw new Error("璐﹀彿鎴栧瘑鐮侀敊璇?);
     return Promise.resolve({ ok: true, token: `static-preview-${username}`, user: getStaticPreviewUser(username) });
   }
   if (path === "/api/me") {
     return Promise.resolve({ ok: true, user: getStaticPreviewUser(state.token.replace(/^static-preview-/, "") || "admin") });
   }
   if (path === "/api/health") {
-    return Promise.resolve({ ok: true, name: "GitHub Pages 静态预览版" });
+    return Promise.resolve({ ok: true, name: "GitHub Pages 闈欐€侀瑙堢増" });
   }
   if (path === "/api/asset-groups" && method === "GET") {
     return Promise.resolve({ ok: true, groups: [...defaultAssetGroups] });
@@ -552,8 +558,8 @@ function applySidebarState() {
   if (!app || !toggle) return;
   app.classList.toggle("sidebar-collapsed", state.sidebarCollapsed);
   toggle.setAttribute("aria-expanded", String(!state.sidebarCollapsed));
-  toggle.setAttribute("aria-label", state.sidebarCollapsed ? "展开侧边栏" : "收起侧边栏");
-  toggle.textContent = state.sidebarCollapsed ? "›" : "‹";
+  toggle.setAttribute("aria-label", state.sidebarCollapsed ? "灞曞紑渚ц竟鏍? : "鏀惰捣渚ц竟鏍?);
+  toggle.textContent = state.sidebarCollapsed ? "鈥? : "鈥?;
 }
 
 function toggleSidebar() {
@@ -602,9 +608,9 @@ async function bootstrap() {
 async function checkHealth() {
   try {
     const data = await api("/api/health");
-    if ($("healthPill")) $("healthPill").textContent = `${data.name} 已连接`;
+    if ($("healthPill")) $("healthPill").textContent = `${data.name} 宸茶繛鎺;
   } catch {
-    if ($("healthPill")) $("healthPill").textContent = "服务连接失败";
+    if ($("healthPill")) $("healthPill").textContent = "鏈嶅姟杩炴帴澶辫触";
   }
 }
 
@@ -644,23 +650,23 @@ function collectBrief() {
     extraInfo: $("extraInfo")?.value.trim() || "",
   };
   const storeProfile = [
-    `行业：${dossier.storeIndustry}`,
-    `店名/品牌：${dossier.brandName}`,
-    `城市：${dossier.storeCity}`,
-    `位置：${dossier.storeLocation}`,
-  ].filter((item) => !item.endsWith("：")).join("\n");
+    `琛屼笟锛?{dossier.storeIndustry}`,
+    `搴楀悕/鍝佺墝锛?{dossier.brandName}`,
+    `鍩庡競锛?{dossier.storeCity}`,
+    `浣嶇疆锛?{dossier.storeLocation}`,
+  ].filter((item) => !item.endsWith("锛?)).join("\n");
   const personaProfile = [
-    `自我称呼：${dossier.personaName}`,
-    `年龄：${dossier.personaAge}`,
-    `性别：${dossier.personaGender}`,
-    `从业/开店年限：${dossier.businessYears}`,
-    `籍贯/地域身份：${dossier.hometown}`,
-  ].filter((item) => !item.endsWith("：")).join("\n");
+    `鑷垜绉板懠锛?{dossier.personaName}`,
+    `骞撮緞锛?{dossier.personaAge}`,
+    `鎬у埆锛?{dossier.personaGender}`,
+    `浠庝笟/寮€搴楀勾闄愶細${dossier.businessYears}`,
+    `绫嶈疮/鍦板煙韬唤锛?{dossier.hometown}`,
+  ].filter((item) => !item.endsWith("锛?)).join("\n");
   const optionalProfile = [
-    `主推产品/套餐：${dossier.mainProduct}`,
-    `产品/服务优势：${dossier.serviceAdvantage}`,
-    `补充信息：${dossier.extraInfo}`,
-  ].filter((item) => !item.endsWith("：")).join("\n");
+    `涓绘帹浜у搧/濂楅锛?{dossier.mainProduct}`,
+    `浜у搧/鏈嶅姟浼樺娍锛?{dossier.serviceAdvantage}`,
+    `琛ュ厖淇℃伅锛?{dossier.extraInfo}`,
+  ].filter((item) => !item.endsWith("锛?)).join("\n");
   return {
     taskType: "research",
     ...dossier,
@@ -668,7 +674,7 @@ function collectBrief() {
     pain: dossier.extraInfo,
     goal: dossier.mainProduct,
     rawText: storeProfile,
-    targetAudience: [dossier.storeCity, dossier.storeLocation].filter(Boolean).join(" · "),
+    targetAudience: [dossier.storeCity, dossier.storeLocation].filter(Boolean).join(" 路 "),
     assetCondition: optionalProfile,
     modelMode: $("modelMode")?.value || "fast",
     style: state.activeTemplateCategory,
@@ -678,25 +684,25 @@ function collectBrief() {
 
 function buildDossierText(brief, includeAiResearch = true) {
   const sections = [
-    `门店基本信息
-行业：${brief.storeIndustry || "未填写"}
-店名/品牌：${brief.brandName || "未填写"}
-城市：${brief.storeCity || "未填写"}
-位置：${brief.storeLocation || "未填写"}`,
-    `人设基本信息
-短视频自我称呼：${brief.personaName || "未填写"}
-年龄：${brief.personaAge || "未填写"}
-性别：${brief.personaGender || "未填写"}
-行业/门店年限：${brief.businessYears || "未填写"}
-籍贯/地域身份：${brief.hometown || "未填写"}`,
-    `补充信息
-主推产品/套餐：${brief.mainProduct || "未填写"}
-产品/服务优势：${brief.serviceAdvantage || "未填写"}
-其他补充：${brief.extraInfo || "未填写"}`,
+    `闂ㄥ簵鍩烘湰淇℃伅
+琛屼笟锛?{brief.storeIndustry || "鏈～鍐?}
+搴楀悕/鍝佺墝锛?{brief.brandName || "鏈～鍐?}
+鍩庡競锛?{brief.storeCity || "鏈～鍐?}
+浣嶇疆锛?{brief.storeLocation || "鏈～鍐?}`,
+    `浜鸿鍩烘湰淇℃伅
+鐭棰戣嚜鎴戠О鍛硷細${brief.personaName || "鏈～鍐?}
+骞撮緞锛?{brief.personaAge || "鏈～鍐?}
+鎬у埆锛?{brief.personaGender || "鏈～鍐?}
+琛屼笟/闂ㄥ簵骞撮檺锛?{brief.businessYears || "鏈～鍐?}
+绫嶈疮/鍦板煙韬唤锛?{brief.hometown || "鏈～鍐?}`,
+    `琛ュ厖淇℃伅
+涓绘帹浜у搧/濂楅锛?{brief.mainProduct || "鏈～鍐?}
+浜у搧/鏈嶅姟浼樺娍锛?{brief.serviceAdvantage || "鏈～鍐?}
+鍏朵粬琛ュ厖锛?{brief.extraInfo || "鏈～鍐?}`,
   ];
   const aiResearch = $("resultStrategy")?.value.trim();
   if (includeAiResearch && aiResearch) {
-    sections.push(`AI 调研结果\n${aiResearch}`);
+    sections.push(`AI 璋冪爺缁撴灉\n${aiResearch}`);
   }
   return sections.join("\n\n");
 }
@@ -715,7 +721,7 @@ function validateResearchDossier() {
   });
   if (missing.length) {
     missing[0].field?.focus();
-    toast(`请先补全必填项：${missing.slice(0, 3).map((item) => item.label).join("、")}${missing.length > 3 ? "等" : ""}`);
+    toast(`璇峰厛琛ュ叏蹇呭～椤癸細${missing.slice(0, 3).map((item) => item.label).join("銆?)}${missing.length > 3 ? "绛? : ""}`);
     return false;
   }
   return true;
@@ -739,8 +745,8 @@ function formatCooldown(ms) {
   const seconds = Math.max(1, Math.ceil(ms / 1000));
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (minutes <= 0) return `${rest} 秒`;
-  return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
+  if (minutes <= 0) return `${rest} 绉抈;
+  return rest ? `${minutes} 鍒?${rest} 绉抈 : `${minutes} 鍒嗛挓`;
 }
 
 function claimResearchGenerationSlot() {
@@ -766,11 +772,11 @@ function importResearchDossier() {
   if (!validateResearchDossier()) return false;
   const dossierText = buildDossierText(brief, true);
   $("scriptDossier").value = dossierText;
-  $("scriptDossierState").textContent = $("resultStrategy").value.trim() ? "已导入调研档案库" : "已导入基础档案库";
+  $("scriptDossierState").textContent = $("resultStrategy").value.trim() ? "宸插鍏ヨ皟鐮旀。妗堝簱" : "宸插鍏ュ熀纭€妗ｆ搴?;
   $("scriptDossier").classList.remove("field-missing");
   document.querySelector(".dossier-mini")?.classList.remove("field-missing");
   resetScriptGenerationDraft();
-  toast("调研档案库已导入脚本模块");
+  toast("璋冪爺妗ｆ搴撳凡瀵煎叆鑴氭湰妯″潡");
   scheduleWorkspaceDraftSave();
   return true;
 }
@@ -784,11 +790,11 @@ function resetScriptGenerationDraft() {
     if (field) field.value = "";
   });
   if ($("scriptDossierState")) $("scriptDossierState").textContent = $("resultStrategy").value.trim()
-    ? "已导入调研档案库，等待生成脚本"
-    : "已导入基础档案库，等待生成脚本";
-  if ($("scriptTopicIdeas")) $("scriptTopicIdeas").placeholder = "已导入档案。点击下方按钮后，DeepSeek 会先思考，再生成可选选题。";
-  if ($("resultScript")) $("resultScript").placeholder = "这里不会自动套模板；生成后才会出现可直接照着念的口播文案。";
-  if ($("resultPrompts")) $("resultPrompts").placeholder = "生成后会按同一镜头匹配：口播文案、拍摄场景/动作、需要素材。";
+    ? "宸插鍏ヨ皟鐮旀。妗堝簱锛岀瓑寰呯敓鎴愯剼鏈?
+    : "宸插鍏ュ熀纭€妗ｆ搴擄紝绛夊緟鐢熸垚鑴氭湰";
+  if ($("scriptTopicIdeas")) $("scriptTopicIdeas").placeholder = "宸插鍏ユ。妗堛€傜偣鍑讳笅鏂规寜閽悗锛孌eepSeek 浼氬厛鎬濊€冿紝鍐嶇敓鎴愬彲閫夐€夐銆?;
+  if ($("resultScript")) $("resultScript").placeholder = "杩欓噷涓嶄細鑷姩濂楁ā鏉匡紱鐢熸垚鍚庢墠浼氬嚭鐜板彲鐩存帴鐓х潃蹇电殑鍙ｆ挱鏂囨銆?;
+  if ($("resultPrompts")) $("resultPrompts").placeholder = "鐢熸垚鍚庝細鎸夊悓涓€闀滃ご鍖归厤锛氬彛鎾枃妗堛€佹媿鎽勫満鏅?鍔ㄤ綔銆侀渶瑕佺礌鏉愩€?;
   renderTopicIdeas([]);
   renderTopicChoiceBar();
   clearShotTableView();
@@ -796,7 +802,7 @@ function resetScriptGenerationDraft() {
 }
 
 function updateScriptSeriesFields() {
-  const isLocal = state.activeTemplateCategory === "同城短视频";
+  const isLocal = state.activeTemplateCategory === "鍚屽煄鐭棰?;
   $("localTargetPanel")?.classList.toggle("hidden", !isLocal);
   if (!isLocal) setLocalAudienceMenu(false);
   if (isLocal) syncLocalAudienceSelections();
@@ -815,22 +821,22 @@ function updateLocalAudienceSummary(selected) {
   const summary = $("localAudienceSummary");
   if (!summary) return;
   if (!selected.length) {
-    summary.textContent = "请选择人群";
+    summary.textContent = "璇烽€夋嫨浜虹兢";
     return;
   }
-  if (selected.includes("人群不限")) {
-    summary.textContent = "人群不限";
+  if (selected.includes("浜虹兢涓嶉檺")) {
+    summary.textContent = "浜虹兢涓嶉檺";
     return;
   }
-  const preview = selected.slice(0, 2).join("、");
-  summary.textContent = selected.length > 2 ? `已选 ${selected.length} 项：${preview} 等` : `已选 ${selected.length} 项：${preview}`;
+  const preview = selected.slice(0, 2).join("銆?);
+  summary.textContent = selected.length > 2 ? `宸查€?${selected.length} 椤癸細${preview} 绛塦 : `宸查€?${selected.length} 椤癸細${preview}`;
 }
 
 function syncLocalAudienceSelections(changedField = null) {
   const boxes = Array.from(document.querySelectorAll('input[name="localAudienceSegmentOption"]'));
   if (!boxes.length) return;
-  const unlimited = boxes.find((box) => box.value === "人群不限");
-  if (changedField?.value === "人群不限" && changedField.checked) {
+  const unlimited = boxes.find((box) => box.value === "浜虹兢涓嶉檺");
+  if (changedField?.value === "浜虹兢涓嶉檺" && changedField.checked) {
     boxes.forEach((box) => {
       if (box !== changedField) box.checked = false;
     });
@@ -839,7 +845,7 @@ function syncLocalAudienceSelections(changedField = null) {
   }
   const selected = boxes.filter((box) => box.checked).map((box) => box.value);
   if ($("localAudienceSegment")) {
-    $("localAudienceSegment").value = selected.join("、");
+    $("localAudienceSegment").value = selected.join("銆?);
     $("localAudienceSegment").classList.remove("field-missing");
   }
   $("localAudienceSegmentGroup")?.classList.remove("field-missing");
@@ -858,16 +864,16 @@ function syncLocalAudienceSelections(changedField = null) {
 
 function deriveAgeRangeFromSegments(selected) {
   if (!selected.length) return "";
-  if (selected.includes("人群不限")) return "不限";
+  if (selected.includes("浜虹兢涓嶉檺")) return "涓嶉檺";
   const ranges = selected.map((name) => localAudienceAgeMap[name]).filter(Boolean);
   if (!ranges.length) return "";
   const hasOpenEnded = ranges.some((range) => range.max === null);
   const mins = ranges.map((range) => range.min).filter((value) => Number.isFinite(value));
   const maxes = ranges.map((range) => range.max).filter((value) => Number.isFinite(value));
-  if (!mins.length) return "不限";
+  if (!mins.length) return "涓嶉檺";
   const min = Math.min(...mins);
-  if (hasOpenEnded) return `${min} 岁以上`;
-  return `${min}-${Math.max(...maxes)} 岁`;
+  if (hasOpenEnded) return `${min} 宀佷互涓奰;
+  return `${min}-${Math.max(...maxes)} 宀乣;
 }
 
 function validateScriptInputs() {
@@ -875,23 +881,23 @@ function validateScriptInputs() {
   const dossier = $("scriptDossier");
   if (!dossier.value.trim()) {
     document.querySelector(".dossier-mini")?.classList.add("field-missing");
-    missing.push({ field: $("importDossierBtn"), label: "调研档案" });
+    missing.push({ field: $("importDossierBtn"), label: "璋冪爺妗ｆ" });
   }
-  if (state.activeTemplateCategory === "同城短视频") {
+  if (state.activeTemplateCategory === "鍚屽煄鐭棰?) {
     const audienceValue = $("localAudienceSegment")?.value?.trim() || "";
     $("localAudienceSelect")?.classList.toggle("field-missing", !audienceValue);
     if (!audienceValue) {
       setLocalAudienceMenu(true);
-      missing.push({ field: $("localAudienceToggle"), label: "同城人群" });
+      missing.push({ field: $("localAudienceToggle"), label: "鍚屽煄浜虹兢" });
     }
     const ageField = $("localAgeRange");
     const ageValue = ageField?.value?.trim() || "";
     ageField?.classList.toggle("field-missing", !ageValue);
-    if (!ageValue) missing.push({ field: ageField, label: "年龄范围" });
+    if (!ageValue) missing.push({ field: ageField, label: "骞撮緞鑼冨洿" });
   }
   if (missing.length) {
     missing[0].field?.focus();
-    toast(`请先补全脚本必填项：${missing.map((item) => item.label).join("、")}`);
+    toast(`璇峰厛琛ュ叏鑴氭湰蹇呭～椤癸細${missing.map((item) => item.label).join("銆?)}`);
     return false;
   }
   return true;
@@ -904,7 +910,7 @@ async function generateResearch(autoJump = false) {
   }
   const slot = claimResearchGenerationSlot();
   if (!slot.ok) {
-    toast(`连续生成已达 3 次，请 ${slot.waitText} 后再试`);
+    toast(`杩炵画鐢熸垚宸茶揪 3 娆★紝璇?${slot.waitText} 鍚庡啀璇昤);
     return;
   }
   let success = false;
@@ -917,7 +923,7 @@ async function generateResearch(autoJump = false) {
     });
     applyAiResult(data, "research");
     success = true;
-    toast(data.provider === "deepseek" ? "DeepSeek 已完成个人调研定位" : "已生成本地个人调研定位");
+    toast(data.provider === "deepseek" ? "DeepSeek 宸插畬鎴愪釜浜鸿皟鐮斿畾浣? : "宸茬敓鎴愭湰鍦颁釜浜鸿皟鐮斿畾浣?);
     if (autoJump) switchTab("scriptTab");
   } finally {
     setResearchLoading(false, brief.modelMode, success);
@@ -935,9 +941,9 @@ async function generateScript() {
     researchProfile: $("scriptDossier").value.trim(),
     localAudienceSegment: $("localAudienceSegment")?.value.trim() || "",
     localAgeRange: $("localAgeRange")?.value.trim() || "",
-    titleStyle: $("scriptTitleStyle")?.value || "智能推荐样式",
-    title_style: $("scriptTitleStyle")?.value || "智能推荐样式",
-    titleTemplateHint: getTitleTemplateHint($("scriptTitleStyle")?.value || "智能推荐样式"),
+    titleStyle: $("scriptTitleStyle")?.value || "鏅鸿兘鎺ㄨ崘鏍峰紡",
+    title_style: $("scriptTitleStyle")?.value || "鏅鸿兘鎺ㄨ崘鏍峰紡",
+    titleTemplateHint: getTitleTemplateHint($("scriptTitleStyle")?.value || "鏅鸿兘鎺ㄨ崘鏍峰紡"),
     modelMode: $("scriptModelMode")?.value || "fast",
   };
   if (!validateScriptInputs()) {
@@ -945,7 +951,7 @@ async function generateScript() {
   }
   let success = false;
   $("scriptBtn").classList.add("is-loading");
-  $("scriptBtn").textContent = "正在生成文案 + 分镜...";
+  $("scriptBtn").textContent = "姝ｅ湪鐢熸垚鏂囨 + 鍒嗛暅...";
   setScriptLoading(true, payload.modelMode);
   try {
     const data = await api("/api/copy/rewrite", {
@@ -954,11 +960,11 @@ async function generateScript() {
     });
     applyAiResult(data, "script");
     success = true;
-    toast(`${state.activeTemplateCategory} 已生成`);
+    toast(`${state.activeTemplateCategory} 宸茬敓鎴恅);
     switchTab("scriptTab");
   } finally {
     $("scriptBtn").classList.remove("is-loading");
-    $("scriptBtn").textContent = "用 DeepSeek 生成文案 + 分镜";
+    $("scriptBtn").textContent = "鐢?DeepSeek 鐢熸垚鏂囨 + 鍒嗛暅";
     setScriptLoading(false, payload.modelMode, success);
   }
 }
@@ -969,8 +975,8 @@ function setScriptLoading(isLoading, mode, success = true) {
   line?.classList.toggle("hidden", !isLoading);
   if (text) {
     text.textContent = mode === "thinking"
-      ? "思考模型正在结合档案、人群和内容系列生成，请稍等..."
-      : "正在快速生成选题、文案和分镜...";
+      ? "鎬濊€冩ā鍨嬫鍦ㄧ粨鍚堟。妗堛€佷汉缇ゅ拰鍐呭绯诲垪鐢熸垚锛岃绋嶇瓑..."
+      : "姝ｅ湪蹇€熺敓鎴愰€夐銆佹枃妗堝拰鍒嗛暅...";
   }
   if (isLoading) {
     startGenerationProgress("script", mode);
@@ -989,10 +995,10 @@ function setResearchLoading(isLoading, mode, success = true) {
   btn.disabled = isLoading;
   if (text) {
     text.textContent = mode === "thinking"
-      ? "思考模型正在深度分析个人定位，请稍等..."
-      : "正在快速生成个人调研定位...";
+      ? "鎬濊€冩ā鍨嬫鍦ㄦ繁搴﹀垎鏋愪釜浜哄畾浣嶏紝璇风◢绛?.."
+      : "姝ｅ湪蹇€熺敓鎴愪釜浜鸿皟鐮斿畾浣?..";
   }
-  $("modelBadge").textContent = isLoading ? (mode === "thinking" ? "思考模型生成中..." : "快速模型生成中...") : $("modelBadge").textContent;
+  $("modelBadge").textContent = isLoading ? (mode === "thinking" ? "鎬濊€冩ā鍨嬬敓鎴愪腑..." : "蹇€熸ā鍨嬬敓鎴愪腑...") : $("modelBadge").textContent;
   if (isLoading) {
     startGenerationProgress("research", mode);
   } else {
@@ -1007,10 +1013,10 @@ const generationProgressConfig = {
     percent: "researchProgressPercent",
     step: "researchProgressStep",
     steps: "researchProgressSteps",
-    doneText: "调研结果已生成，正在写入档案缓存",
-    errorText: "生成中断，请检查必填项或稍后重试",
-    fastSteps: ["读取门店档案", "分析人设定位", "生成调研结果", "写入档案缓存"],
-    thinkingSteps: ["读取门店档案", "深度分析定位", "校准表达策略", "写入档案缓存"],
+    doneText: "璋冪爺缁撴灉宸茬敓鎴愶紝姝ｅ湪鍐欏叆妗ｆ缂撳瓨",
+    errorText: "鐢熸垚涓柇锛岃妫€鏌ュ繀濉」鎴栫◢鍚庨噸璇?,
+    fastSteps: ["璇诲彇闂ㄥ簵妗ｆ", "鍒嗘瀽浜鸿瀹氫綅", "鐢熸垚璋冪爺缁撴灉", "鍐欏叆妗ｆ缂撳瓨"],
+    thinkingSteps: ["璇诲彇闂ㄥ簵妗ｆ", "娣卞害鍒嗘瀽瀹氫綅", "鏍″噯琛ㄨ揪绛栫暐", "鍐欏叆妗ｆ缂撳瓨"],
   },
   script: {
     panel: "scriptProgressPanel",
@@ -1018,10 +1024,10 @@ const generationProgressConfig = {
     percent: "scriptProgressPercent",
     step: "scriptProgressStep",
     steps: "scriptProgressSteps",
-    doneText: "文案和分镜已生成，正在同步到剪辑镜头",
-    errorText: "生成中断，请检查档案、人群或稍后重试",
-    fastSteps: ["导入调研档案", "生成选题方向", "输出文案内容", "同步分镜缓存"],
-    thinkingSteps: ["导入调研档案", "推演内容逻辑", "生成文案分镜", "同步剪辑缓存"],
+    doneText: "鏂囨鍜屽垎闀滃凡鐢熸垚锛屾鍦ㄥ悓姝ュ埌鍓緫闀滃ご",
+    errorText: "鐢熸垚涓柇锛岃妫€鏌ユ。妗堛€佷汉缇ゆ垨绋嶅悗閲嶈瘯",
+    fastSteps: ["瀵煎叆璋冪爺妗ｆ", "鐢熸垚閫夐鏂瑰悜", "杈撳嚭鏂囨鍐呭", "鍚屾鍒嗛暅缂撳瓨"],
+    thinkingSteps: ["瀵煎叆璋冪爺妗ｆ", "鎺ㄦ紨鍐呭閫昏緫", "鐢熸垚鏂囨鍒嗛暅", "鍚屾鍓緫缂撳瓨"],
   },
 };
 
@@ -1079,7 +1085,7 @@ function finishGenerationProgress(type, success = true) {
   if (!panel || panel.classList.contains("hidden")) return;
   panel.classList.toggle("is-error", !success);
   if (bar) bar.style.width = success ? "100%" : "100%";
-  if (percent) percent.textContent = success ? "100%" : "失败";
+  if (percent) percent.textContent = success ? "100%" : "澶辫触";
   if (step) step.textContent = success ? config.doneText : config.errorText;
   if (stepsBox) {
     [...stepsBox.querySelectorAll(".progress-step")].forEach((el) => {
@@ -1109,10 +1115,10 @@ function startEditProgress() {
   overlay.classList.remove("hidden");
   let value = 8;
   const messages = [
-    "正在生成克隆配音，让口播和镜头时间对齐。",
-    "正在匹配视频库素材，把分镜转换成画面段落。",
-    "正在合成字幕、标题和 BGM。",
-    "正在写入成品库存，马上可以预览下载。",
+    "姝ｅ湪鐢熸垚鍏嬮殕閰嶉煶锛岃鍙ｆ挱鍜岄暅澶存椂闂村榻愩€?,
+    "姝ｅ湪鍖归厤瑙嗛搴撶礌鏉愶紝鎶婂垎闀滆浆鎹㈡垚鐢婚潰娈佃惤銆?,
+    "姝ｅ湪鍚堟垚瀛楀箷銆佹爣棰樺拰 BGM銆?,
+    "姝ｅ湪鍐欏叆鎴愬搧搴撳瓨锛岄┈涓婂彲浠ラ瑙堜笅杞姐€?,
   ];
   const render = () => {
     const safeValue = Math.max(0, Math.min(96, Math.round(value)));
@@ -1141,7 +1147,7 @@ function stopEditProgress(success = true) {
   if (!overlay) return;
   if (success) {
     if (bar) bar.style.width = "100%";
-    if (text) text.textContent = "成片已生成，正在打开成品库存。";
+    if (text) text.textContent = "鎴愮墖宸茬敓鎴愶紝姝ｅ湪鎵撳紑鎴愬搧搴撳瓨銆?;
     setTimeout(() => overlay.classList.add("hidden"), 900);
   } else {
     overlay.classList.add("hidden");
@@ -1165,9 +1171,9 @@ function normalizeStringList(value) {
 
 function cleanTopicTitle(value) {
   return String(value || "")
-    .replace(/^[-*●\s]*/, "")
-    .replace(/^(?:选题\s*)?(?:[一二三四五六七八九十]|\d+)[\.、\):：\s-]*/i, "")
-    .replace(/^(?:标题|题目|主选题)[:：]\s*/, "")
+    .replace(/^[-*鈼廫s]*/, "")
+    .replace(/^(?:閫夐\s*)?(?:[涓€浜屼笁鍥涗簲鍏竷鍏節鍗乚|\d+)[\.銆乗):锛歕s-]*/i, "")
+    .replace(/^(?:鏍囬|棰樼洰|涓婚€夐)[:锛歖\s*/, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 42);
@@ -1176,9 +1182,9 @@ function cleanTopicTitle(value) {
 function cleanTopicReason(value) {
   const text = String(value || "")
     .replace(/\s+/g, " ")
-    .replace(/^(?:理由|人性点|情绪入口|人群匹配|逻辑)[:：]\s*/, "")
+    .replace(/^(?:鐞嗙敱|浜烘€х偣|鎯呯华鍏ュ彛|浜虹兢鍖归厤|閫昏緫)[:锛歖\s*/, "")
     .trim();
-  if (!text) return "结合当前档案生成，适合直接进入文案和分镜。";
+  if (!text) return "缁撳悎褰撳墠妗ｆ鐢熸垚锛岄€傚悎鐩存帴杩涘叆鏂囨鍜屽垎闀溿€?;
   return text.length > 92 ? `${text.slice(0, 92)}...` : text;
 }
 
@@ -1189,15 +1195,15 @@ function parseTopicOptionsFromStrategy(strategy) {
     .filter(Boolean);
   const options = [];
   lines.forEach((line) => {
-    if (/^(选题方向|底层判断|推荐采用|调研定位|门店档案|人设档案|模型模式|输出要求)[:：]/.test(line)) return;
-    const match = line.match(/^(?:选题\s*)?([一二三四五六七八九十]|\d+)[\.、\):：\s-]+(.+)$/i);
+    if (/^(閫夐鏂瑰悜|搴曞眰鍒ゆ柇|鎺ㄨ崘閲囩敤|璋冪爺瀹氫綅|闂ㄥ簵妗ｆ|浜鸿妗ｆ|妯″瀷妯″紡|杈撳嚭瑕佹眰)[:锛歖/.test(line)) return;
+    const match = line.match(/^(?:閫夐\s*)?([涓€浜屼笁鍥涗簲鍏竷鍏節鍗乚|\d+)[\.銆乗):锛歕s-]+(.+)$/i);
     if (!match) return;
     const body = match[2].trim();
-    if (!body || /^(底层判断|推荐采用|调研定位|门店档案|人设档案)/.test(body)) return;
-    const titleMatch = body.match(/(?:标题|选题)[:：]\s*([^；;。]+)/);
-    const title = cleanTopicTitle(titleMatch ? titleMatch[1] : body.split(/[；;。]/)[0]);
+    if (!body || /^(搴曞眰鍒ゆ柇|鎺ㄨ崘閲囩敤|璋冪爺瀹氫綅|闂ㄥ簵妗ｆ|浜鸿妗ｆ)/.test(body)) return;
+    const titleMatch = body.match(/(?:鏍囬|閫夐)[:锛歖\s*([^锛?銆俔+)/);
+    const title = cleanTopicTitle(titleMatch ? titleMatch[1] : body.split(/[锛?銆俔/)[0]);
     if (!title) return;
-    const reason = cleanTopicReason(body.replace(title, "").replace(/^[；;。:\s]+/, ""));
+    const reason = cleanTopicReason(body.replace(title, "").replace(/^[锛?銆?\s]+/, ""));
     options.push({ title, reason });
   });
   return options;
@@ -1205,9 +1211,9 @@ function parseTopicOptionsFromStrategy(strategy) {
 
 function stripSpokenLine(line) {
   return String(line || "")
-    .replace(/^[-*●\s]*/, "")
-    .replace(/^镜头\s*(?:\d+|[一二三四五六七八九十]+)[:：、. ]*/i, "")
-    .replace(/^(?:文案|口播|台词|开头|中段|证明|结尾)[:：]\s*/, "")
+    .replace(/^[-*鈼廫s]*/, "")
+    .replace(/^闀滃ご\s*(?:\d+|[涓€浜屼笁鍥涗簲鍏竷鍏節鍗乚+)[:锛氥€? ]*/i, "")
+    .replace(/^(?:鏂囨|鍙ｆ挱|鍙拌瘝|寮€澶磡涓|璇佹槑|缁撳熬)[:锛歖\s*/, "")
     .trim();
 }
 
@@ -1217,126 +1223,126 @@ function splitScriptSentences(text) {
   const labeledSpeech = raw
     .split(/\n+/)
     .map((line) => line.trim())
-    .filter((line) => /^(?:文案|口播|台词)[:：]/.test(line))
+    .filter((line) => /^(?:鏂囨|鍙ｆ挱|鍙拌瘝)[:锛歖/.test(line))
     .map(stripSpokenLine)
     .filter(Boolean);
   if (labeledSpeech.length >= 3) return labeledSpeech;
   const lineParts = raw.split(/\n+/).map(stripSpokenLine).filter(Boolean);
   if (lineParts.length >= 3) return lineParts;
   return raw
-    .replace(/([。！？!?])/g, "$1\n")
+    .replace(/([銆傦紒锛??])/g, "$1\n")
     .split(/\n+/)
     .map(stripSpokenLine)
     .filter((line) => line.length >= 6);
 }
 
 function inferMaterialLabel(text) {
-  if (/口播|老板|真人|讲解|正对镜头/.test(text)) return "口播视频";
-  if (/门店|环境|门头|前台|商圈|同城|城市|街区/.test(text)) return "门店环境";
-  if (/过程|流程|操作|护理|服务|制作/.test(text)) return "项目过程";
-  if (/反馈|案例|顾客|评价|前后|见证/.test(text)) return "顾客反馈";
-  if (/产品|团购|套餐|价格|权益|菜单/.test(text)) return "产品/团购图";
-  return "口播视频";
+  if (/鍙ｆ挱|鑰佹澘|鐪熶汉|璁茶В|姝ｅ闀滃ご/.test(text)) return "鍙ｆ挱瑙嗛";
+  if (/闂ㄥ簵|鐜|闂ㄥご|鍓嶅彴|鍟嗗湀|鍚屽煄|鍩庡競|琛楀尯/.test(text)) return "闂ㄥ簵鐜";
+  if (/杩囩▼|娴佺▼|鎿嶄綔|鎶ょ悊|鏈嶅姟|鍒朵綔/.test(text)) return "椤圭洰杩囩▼";
+  if (/鍙嶉|妗堜緥|椤惧|璇勪环|鍓嶅悗|瑙佽瘉/.test(text)) return "椤惧鍙嶉";
+  if (/浜у搧|鍥㈣喘|濂楅|浠锋牸|鏉冪泭|鑿滃崟/.test(text)) return "浜у搧/鍥㈣喘鍥?;
+  return "鍙ｆ挱瑙嗛";
 }
 
 function buildTopicScript(title, index = 0) {
   const brief = collectBrief();
-  const industry = brief.storeIndustry || "本地生活";
-  const brand = brief.brandName || "我们店";
-  const city = brief.storeCity || "本地";
-  const name = brief.personaName || "老板";
-  const mainProduct = brief.mainProduct || "主推项目";
-  const advantage = brief.serviceAdvantage || "真实、专业、省心";
-  if (state.activeTemplateCategory === "同城短视频") {
+  const industry = brief.storeIndustry || "鏈湴鐢熸椿";
+  const brand = brief.brandName || "鎴戜滑搴?;
+  const city = brief.storeCity || "鏈湴";
+  const name = brief.personaName || "鑰佹澘";
+  const mainProduct = brief.mainProduct || "涓绘帹椤圭洰";
+  const advantage = brief.serviceAdvantage || "鐪熷疄銆佷笓涓氥€佺渷蹇?;
+  if (state.activeTemplateCategory === "鍚屽煄鐭棰?) {
     return [
-      `镜头一：如果你也在${city}。选店别只看价格。`,
-      `镜头二：我叫${name}。在${brand}做${industry}。`,
-      `镜头三：今天讲${title}。先帮你少踩坑。`,
-      `镜头四：先看环境。再看过程。还要看反馈。`,
-      `镜头五：刚好在附近。先收藏再慢慢看。`,
+      `闀滃ご涓€锛氬鏋滀綘涔熷湪${city}銆傞€夊簵鍒彧鐪嬩环鏍笺€俙,
+      `闀滃ご浜岋細鎴戝彨${name}銆傚湪${brand}鍋?{industry}銆俙,
+      `闀滃ご涓夛細浠婂ぉ璁?{title}銆傚厛甯綘灏戣俯鍧戙€俙,
+      `闀滃ご鍥涳細鍏堢湅鐜銆傚啀鐪嬭繃绋嬨€傝繕瑕佺湅鍙嶉銆俙,
+      `闀滃ご浜旓細鍒氬ソ鍦ㄩ檮杩戙€傚厛鏀惰棌鍐嶆參鎱㈢湅銆俙,
     ].join("\n");
   }
-  if (state.activeTemplateCategory === "团单短视频") {
+  if (state.activeTemplateCategory === "鍥㈠崟鐭棰?) {
     return [
-      `镜头一：这个${mainProduct}。不是谁都适合。`,
-      `镜头二：先别急着下单。先看你适不适合。`,
-      `镜头三：重点不是便宜。是流程要讲清楚。`,
-      `镜头四：到店先确认需求。再安排对应服务。`,
-      `镜头五：担心买错。可以先私信问我。`,
+      `闀滃ご涓€锛氳繖涓?{mainProduct}銆備笉鏄皝閮介€傚悎銆俙,
+      `闀滃ご浜岋細鍏堝埆鎬ョ潃涓嬪崟銆傚厛鐪嬩綘閫備笉閫傚悎銆俙,
+      `闀滃ご涓夛細閲嶇偣涓嶆槸渚垮疁銆傛槸娴佺▼瑕佽娓呮銆俙,
+      `闀滃ご鍥涳細鍒板簵鍏堢‘璁ら渶姹傘€傚啀瀹夋帓瀵瑰簲鏈嶅姟銆俙,
+      `闀滃ご浜旓細鎷呭績涔伴敊銆傚彲浠ュ厛绉佷俊闂垜銆俙,
     ].join("\n");
   }
   return [
-    `镜头一：视频没效果。往往不是不会拍。`,
-    `镜头二：今天讲${title}。先抓住客户担心。`,
-    `镜头三：我叫${name}。在${brand}做${industry}。`,
-    `镜头四：优势是${advantage}。但别只喊口号。`,
-    `镜头五：先让客户看懂。再让客户咨询。`,
+    `闀滃ご涓€锛氳棰戞病鏁堟灉銆傚線寰€涓嶆槸涓嶄細鎷嶃€俙,
+    `闀滃ご浜岋細浠婂ぉ璁?{title}銆傚厛鎶撲綇瀹㈡埛鎷呭績銆俙,
+    `闀滃ご涓夛細鎴戝彨${name}銆傚湪${brand}鍋?{industry}銆俙,
+    `闀滃ご鍥涳細浼樺娍鏄?{advantage}銆備絾鍒彧鍠婂彛鍙枫€俙,
+    `闀滃ご浜旓細鍏堣瀹㈡埛鐪嬫噦銆傚啀璁╁鎴峰挩璇€俙,
   ].join("\n");
 }
 
 function buildTopicShotPrompts(title, index = 0) {
   const brief = collectBrief();
-  const brand = brief.brandName || "门店";
-  const city = brief.storeCity || "本地";
+  const brand = brief.brandName || "闂ㄥ簵";
+  const city = brief.storeCity || "鏈湴";
   const scriptLines = buildTopicScript(title, index).split(/\n+/).map(stripSpokenLine);
   const scenes = [
-    `${brief.personaName || "老板"}站在${brand}门口或前台，手机竖屏正对镜头开场，背景能看到门店标识`,
-    `切到${city}街区、商圈或门店外景，画面节奏快一点，承接同城感和真实场景`,
-    `拍服务流程、项目操作或产品细节特写，动作要清楚，让客户能看懂你在做什么`,
-    `切顾客反馈、门店环境、前后对比或案例照片，画面停留 2-3 秒给观众看清楚`,
-    `回到老板口播，镜头靠近一点，给出收藏、私信、到店体验或团购领取动作`,
+    `${brief.personaName || "鑰佹澘"}绔欏湪${brand}闂ㄥ彛鎴栧墠鍙帮紝鎵嬫満绔栧睆姝ｅ闀滃ご寮€鍦猴紝鑳屾櫙鑳界湅鍒伴棬搴楁爣璇哷,
+    `鍒囧埌${city}琛楀尯銆佸晢鍦堟垨闂ㄥ簵澶栨櫙锛岀敾闈㈣妭濂忓揩涓€鐐癸紝鎵挎帴鍚屽煄鎰熷拰鐪熷疄鍦烘櫙`,
+    `鎷嶆湇鍔℃祦绋嬨€侀」鐩搷浣滄垨浜у搧缁嗚妭鐗瑰啓锛屽姩浣滆娓呮锛岃瀹㈡埛鑳界湅鎳備綘鍦ㄥ仛浠€涔坄,
+    `鍒囬【瀹㈠弽棣堛€侀棬搴楃幆澧冦€佸墠鍚庡姣旀垨妗堜緥鐓х墖锛岀敾闈㈠仠鐣?2-3 绉掔粰瑙備紬鐪嬫竻妤歚,
+    `鍥炲埌鑰佹澘鍙ｆ挱锛岄暅澶撮潬杩戜竴鐐癸紝缁欏嚭鏀惰棌銆佺淇°€佸埌搴椾綋楠屾垨鍥㈣喘棰嗗彇鍔ㄤ綔`,
   ];
   return scenes.map((scene, idx) => {
     const material = inferMaterialLabel(scene);
-    return `镜头 ${String(idx + 1).padStart(2, "0")}：文案：${scriptLines[idx] || title}；画面：${scene}；素材：${material}`;
+    return `闀滃ご ${String(idx + 1).padStart(2, "0")}锛氭枃妗堬細${scriptLines[idx] || title}锛涚敾闈細${scene}锛涚礌鏉愶細${material}`;
   });
 }
 
 function normalizeExecutableScript(script, title, index = 0) {
   const lines = splitScriptSentences(script);
   if (lines.length < 3) return buildTopicScript(title, index);
-  return lines.slice(0, 6).map((line, idx) => `镜头${topicNumberLabels[idx] || idx + 1}：${line}`).join("\n");
+  return lines.slice(0, 6).map((line, idx) => `闀滃ご${topicNumberLabels[idx] || idx + 1}锛?{line}`).join("\n");
 }
 
 function normalizeShotPrompts(prompts, title, index = 0) {
   const scriptLines = buildTopicScript(title, index).split(/\n+/).map(stripSpokenLine);
   return prompts.slice(0, 6).map((line, idx) => {
     const clean = String(line || "").trim();
-    if (/文案[:：].+画面[:：]/.test(clean)) return clean;
-    return `镜头 ${String(idx + 1).padStart(2, "0")}：文案：${scriptLines[idx] || title}；画面：${clean}；素材：${inferMaterialLabel(clean)}`;
+    if (/鏂囨[:锛歖.+鐢婚潰[:锛歖/.test(clean)) return clean;
+    return `闀滃ご ${String(idx + 1).padStart(2, "0")}锛氭枃妗堬細${scriptLines[idx] || title}锛涚敾闈細${clean}锛涚礌鏉愶細${inferMaterialLabel(clean)}`;
   });
 }
 
 function buildFallbackTopicOptions(result = {}) {
   const brief = collectBrief();
-  const industry = brief.storeIndustry || "本地生活";
-  const brand = brief.brandName || "门店";
-  const city = brief.storeCity || "本地";
+  const industry = brief.storeIndustry || "鏈湴鐢熸椿";
+  const brand = brief.brandName || "闂ㄥ簵";
+  const city = brief.storeCity || "鏈湴";
   const location = brief.storeLocation || city;
-  const mainProduct = brief.mainProduct || "主推套餐";
+  const mainProduct = brief.mainProduct || "涓绘帹濂楅";
   let base = [];
-  if (state.activeTemplateCategory === "同城短视频") {
+  if (state.activeTemplateCategory === "鍚屽煄鐭棰?) {
     base = [
-      { title: `${city}下班后，为什么越来越多人想找一家省心的店`, reason: "用城市生活场景圈住附近人群，再自然承接门店信任。" },
-      { title: `住在${location}附近，怎么判断一家店靠不靠谱`, reason: "同城用户先关心距离和风险，适合用避坑切口破圈。" },
-      { title: `${city}人最近最容易忽略的一次到店消费选择`, reason: "从本地生活习惯切入，不直接硬讲行业，更容易停留。" },
+      { title: `${city}涓嬬彮鍚庯紝涓轰粈涔堣秺鏉ヨ秺澶氫汉鎯虫壘涓€瀹剁渷蹇冪殑搴梎, reason: "鐢ㄥ煄甯傜敓娲诲満鏅湀浣忛檮杩戜汉缇わ紝鍐嶈嚜鐒舵壙鎺ラ棬搴椾俊浠汇€? },
+      { title: `浣忓湪${location}闄勮繎锛屾€庝箞鍒ゆ柇涓€瀹跺簵闈犱笉闈犺氨`, reason: "鍚屽煄鐢ㄦ埛鍏堝叧蹇冭窛绂诲拰椋庨櫓锛岄€傚悎鐢ㄩ伩鍧戝垏鍙ｇ牬鍦堛€? },
+      { title: `${city}浜烘渶杩戞渶瀹规槗蹇界暐鐨勪竴娆″埌搴楁秷璐归€夋嫨`, reason: "浠庢湰鍦扮敓娲讳範鎯垏鍏ワ紝涓嶇洿鎺ョ‖璁茶涓氾紝鏇村鏄撳仠鐣欍€? },
     ];
-  } else if (state.activeTemplateCategory === "团单短视频") {
+  } else if (state.activeTemplateCategory === "鍥㈠崟鐭棰?) {
     base = [
-      { title: `${mainProduct}到底适合谁，不适合谁`, reason: "先降低决策成本，让用户判断自己该不该买。" },
-      { title: `第一次到${brand}使用团单，先看这几个细节`, reason: "把流程讲清楚，减少到店前的不确定感。" },
-      { title: `这个套餐为什么不是单纯便宜，而是省心`, reason: "把价格锚点转成价值锚点，适合转化。" },
+      { title: `${mainProduct}鍒板簳閫傚悎璋侊紝涓嶉€傚悎璋乣, reason: "鍏堥檷浣庡喅绛栨垚鏈紝璁╃敤鎴峰垽鏂嚜宸辫涓嶈涔般€? },
+      { title: `绗竴娆″埌${brand}浣跨敤鍥㈠崟锛屽厛鐪嬭繖鍑犱釜缁嗚妭`, reason: "鎶婃祦绋嬭娓呮锛屽噺灏戝埌搴楀墠鐨勪笉纭畾鎰熴€? },
+      { title: `杩欎釜濂楅涓轰粈涔堜笉鏄崟绾究瀹滐紝鑰屾槸鐪佸績`, reason: "鎶婁环鏍奸敋鐐硅浆鎴愪环鍊奸敋鐐癸紝閫傚悎杞寲銆? },
     ];
   } else {
     base = [
-      { title: `很多${industry}视频没效果，不是因为不会拍`, reason: "用反常识切入，先抓停留，再讲真实判断。" },
-      { title: `客户不信任你，往往不是价格问题`, reason: "击中老板和客户之间的信任卡点，适合制造共鸣。" },
-      { title: `${industry}里最容易让客户踩坑的一件事`, reason: "避坑天然带情绪和收藏动作，适合流量入口。" },
+      { title: `寰堝${industry}瑙嗛娌℃晥鏋滐紝涓嶆槸鍥犱负涓嶄細鎷峘, reason: "鐢ㄥ弽甯歌瘑鍒囧叆锛屽厛鎶撳仠鐣欙紝鍐嶈鐪熷疄鍒ゆ柇銆? },
+      { title: `瀹㈡埛涓嶄俊浠讳綘锛屽線寰€涓嶆槸浠锋牸闂`, reason: "鍑讳腑鑰佹澘鍜屽鎴蜂箣闂寸殑淇′换鍗＄偣锛岄€傚悎鍒堕€犲叡楦ｃ€? },
+      { title: `${industry}閲屾渶瀹规槗璁╁鎴疯俯鍧戠殑涓€浠朵簨`, reason: "閬垮潙澶╃劧甯︽儏缁拰鏀惰棌鍔ㄤ綔锛岄€傚悎娴侀噺鍏ュ彛銆? },
     ];
   }
   const modelTitle = cleanTopicTitle(result.title);
-  if (modelTitle && !/脚本|Untitled/i.test(modelTitle) && !base.some((item) => item.title === modelTitle)) {
-    base.unshift({ title: modelTitle, reason: "DeepSeek 推荐的主选题，已放在第一位。" });
+  if (modelTitle && !/鑴氭湰|Untitled/i.test(modelTitle) && !base.some((item) => item.title === modelTitle)) {
+    base.unshift({ title: modelTitle, reason: "DeepSeek 鎺ㄨ崘鐨勪富閫夐锛屽凡鏀惧湪绗竴浣嶃€? });
   }
   return base.slice(0, 3);
 }
@@ -1360,7 +1366,7 @@ function normalizeTopicOptions(result = {}) {
     unique.push({ ...option, title });
   });
   return unique.slice(0, 5).map((option, index) => {
-    const title = cleanTopicTitle(option.title) || buildFallbackTopicOptions(result)[index]?.title || `选题${topicNumberLabels[index] || index + 1}`;
+    const title = cleanTopicTitle(option.title) || buildFallbackTopicOptions(result)[index]?.title || `閫夐${topicNumberLabels[index] || index + 1}`;
     const directScript = option.script || (index === 0 ? result.script : "");
     const rawShotPrompts = normalizeStringList(option.shotPrompts).length
       ? normalizeStringList(option.shotPrompts)
@@ -1380,7 +1386,7 @@ function renderTopicIdeas(options) {
   if (!box) return;
   box.value = options.map((option, index) => {
     const label = topicNumberLabels[index] || index + 1;
-    return `选题${label}：${option.title}\n理由：${option.reason}`;
+    return `閫夐${label}锛?{option.title}\n鐞嗙敱锛?{option.reason}`;
   }).join("\n\n");
 }
 
@@ -1393,9 +1399,9 @@ function renderTopicChoiceBar() {
     bar.innerHTML = "";
     return;
   }
-  bar.innerHTML = `<span>选用</span>${options.map((_, index) => {
+  bar.innerHTML = `<span>閫夌敤</span>${options.map((_, index) => {
     const label = topicNumberLabels[index] || index + 1;
-    return `<button type="button" class="topic-choice ${index === state.selectedTopicIndex ? "active" : ""}" data-topic-index="${index}">选题${label}</button>`;
+    return `<button type="button" class="topic-choice ${index === state.selectedTopicIndex ? "active" : ""}" data-topic-index="${index}">閫夐${label}</button>`;
   }).join("")}`;
   bar.querySelectorAll("[data-topic-index]").forEach((btn) => {
     btn.addEventListener("click", () => applySelectedTopic(Number(btn.dataset.topicIndex)));
@@ -1410,13 +1416,13 @@ function applySelectedTopic(index = 0, options = {}) {
   $("resultTitle").value = topic.title;
   $("resultScript").value = formatScriptRows(rows);
   $("resultPrompts").value = formatPromptRows(rows);
-  $("resultTags").value = Array.isArray(topic.tags) ? topic.tags.join("、") : "";
+  $("resultTags").value = Array.isArray(topic.tags) ? topic.tags.join("銆?) : "";
   $("ttsText").value = formatVoiceoverRows(rows);
   $("videoTitle").value = topic.title;
   $("videoScript").value = formatVoiceoverRows(rows);
   renderTopicChoiceBar();
   if (!options.silent) {
-    toast(`已选用选题${topicNumberLabels[index] || index + 1}`);
+    toast(`宸查€夌敤閫夐${topicNumberLabels[index] || index + 1}`);
   }
   scheduleWorkspaceDraftSave();
 }
@@ -1427,7 +1433,7 @@ function getTopicShotRows(topic = {}) {
     .split(/\n+/)
     .map((line) => cleanVoiceoverLine(line))
     .filter(Boolean);
-  const fallbackPrompts = buildTopicShotPrompts(topic.title || "选题", state.selectedTopicIndex || 0).map(parseShotLine);
+  const fallbackPrompts = buildTopicShotPrompts(topic.title || "閫夐", state.selectedTopicIndex || 0).map(parseShotLine);
   const count = Math.max(promptRows.length, scriptRows.length, 4);
   const rows = Array.from({ length: Math.min(count, 8) }).map((_, index) => {
     const prompt = promptRows[index] || fallbackPrompts[index] || {};
@@ -1435,7 +1441,7 @@ function getTopicShotRows(topic = {}) {
     const text = isInstructionalSpokenText(promptText)
       ? cleanVoiceoverLine(scriptRows[index] || topic.title || "")
       : cleanVoiceoverLine(promptText || scriptRows[index] || topic.title || "");
-    const visual = cleanVisualLine(prompt.visual || inferVisual(text, assetTypeLabels[prompt.materialType] || "口播画面"));
+    const visual = cleanVisualLine(prompt.visual || inferVisual(text, assetTypeLabels[prompt.materialType] || "鍙ｆ挱鐢婚潰"));
     const materialType = prompt.materialType || inferMaterialType(`${text} ${visual}`) || assetOrder[index % assetOrder.length][0];
     const materialLabel = prompt.materialLabel || assetTypeLabels[materialType] || inferMaterialLabel(`${text} ${visual}`);
     return {
@@ -1458,7 +1464,7 @@ function expandShotRowsForEditing(rows, limit = 12) {
         ...row,
         text: segment,
         visual: segmentIndex === 0
-          ? cleanVisualLine(row.visual || inferVisual(segment, row.materialLabel || "口播画面"))
+          ? cleanVisualLine(row.visual || inferVisual(segment, row.materialLabel || "鍙ｆ挱鐢婚潰"))
           : continueVisualForSegment(row.visual, row.materialLabel, segmentIndex),
       });
     });
@@ -1468,13 +1474,13 @@ function expandShotRowsForEditing(rows, limit = 12) {
 
 function splitVoiceoverForShot(text = "", target = 12, max = 16) {
   const clean = cleanVoiceoverLine(text)
-    .replace(/[，,、；;：:]/g, " ")
+    .replace(/[锛?銆侊紱;锛?]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (!clean) return [];
   const rawParts = clean
-    .split(/(?<=[。！？!?])|\s+/)
-    .map((part) => part.replace(/[。！？!?]/g, "").trim())
+    .split(/(?<=[銆傦紒锛??])|\s+/)
+    .map((part) => part.replace(/[銆傦紒锛??]/g, "").trim())
     .filter(Boolean);
   const sourceParts = rawParts.length ? rawParts : [clean];
   const segments = [];
@@ -1505,7 +1511,7 @@ function splitTextByLength(text = "", target = 12, max = 16) {
 }
 
 function findNaturalCut(text, target, max) {
-  const preferred = ["但是", "所以", "因为", "如果", "然后", "先", "再", "才", "就", "让", "看", "做", "省", "比"];
+  const preferred = ["浣嗘槸", "鎵€浠?, "鍥犱负", "濡傛灉", "鐒跺悗", "鍏?, "鍐?, "鎵?, "灏?, "璁?, "鐪?, "鍋?, "鐪?, "姣?];
   for (let i = Math.min(max, text.length - 1); i >= 6; i -= 1) {
     const left = text.slice(Math.max(0, i - 2), i + 2);
     if (preferred.some((word) => left.includes(word)) && Math.abs(i - target) <= 5) return i;
@@ -1514,20 +1520,20 @@ function findNaturalCut(text, target, max) {
 }
 
 function continueVisualForSegment(visual = "", materialLabel = "", index = 1) {
-  const base = cleanVisualLine(visual || materialLabel || "同一场景继续拍");
-  if (/近景|特写|细节|动作|切/.test(base)) return base;
-  return `${base}，补拍近景或动作细节 ${index + 1}`;
+  const base = cleanVisualLine(visual || materialLabel || "鍚屼竴鍦烘櫙缁х画鎷?);
+  if (/杩戞櫙|鐗瑰啓|缁嗚妭|鍔ㄤ綔|鍒?.test(base)) return base;
+  return `${base}锛岃ˉ鎷嶈繎鏅垨鍔ㄤ綔缁嗚妭 ${index + 1}`;
 }
 
 function isInstructionalSpokenText(text = "") {
   const value = String(text || "");
   if (!value) return false;
-  return /你要|需要|应该|可以|说明|讲解|表达|强调|展示|引导|告诉客户|说出|突出/.test(value) &&
-    !/我|我们|你如果|如果你|先看|别急|记住|收藏|私信|到店/.test(value);
+  return /浣犺|闇€瑕亅搴旇|鍙互|璇存槑|璁茶В|琛ㄨ揪|寮鸿皟|灞曠ず|寮曞|鍛婅瘔瀹㈡埛|璇村嚭|绐佸嚭/.test(value) &&
+    !/鎴憒鎴戜滑|浣犲鏋渱濡傛灉浣爘鍏堢湅|鍒€璁颁綇|鏀惰棌|绉佷俊|鍒板簵/.test(value);
 }
 
 function formatScriptRows(rows) {
-  return rows.map((row, index) => `镜头${index + 1}：${row.text}`).join("\n");
+  return rows.map((row, index) => `闀滃ご${index + 1}锛?{row.text}`).join("\n");
 }
 
 function formatVoiceoverRows(rows) {
@@ -1536,7 +1542,7 @@ function formatVoiceoverRows(rows) {
 
 function formatPromptRows(rows) {
   return rows.map((row, index) => (
-    `镜头 ${String(index + 1).padStart(2, "0")}｜口播：${row.text}｜拍摄：${row.visual}｜素材：${row.materialLabel}`
+    `闀滃ご ${String(index + 1).padStart(2, "0")}锝滃彛鎾細${row.text}锝滄媿鎽勶細${row.visual}锝滅礌鏉愶細${row.materialLabel}`
   )).join("\n");
 }
 
@@ -1555,7 +1561,7 @@ function applyAiResult(data, taskType = "") {
     state.scriptTopicOptions = normalizeTopicOptions(r);
     state.selectedTopicIndex = 0;
     renderTopicIdeas(state.scriptTopicOptions);
-    if ($("scriptDossierState")) $("scriptDossierState").textContent = `已生成 · ${modelLine}`;
+    if ($("scriptDossierState")) $("scriptDossierState").textContent = `宸茬敓鎴?路 ${modelLine}`;
     applySelectedTopic(0, { silent: true });
     scheduleWorkspaceDraftSave();
     return;
@@ -1597,15 +1603,15 @@ function getSelectedTemplate() {
 function renderTemplatePreview() {
   const tpl = getSelectedTemplate();
   if (!tpl) {
-    $("templatePreview").textContent = "暂无模板";
+    $("templatePreview").textContent = "鏆傛棤妯℃澘";
     return;
   }
   const hints = {
-    "流量短视频": "先出能让人停留的选题，再生成文案和分镜。",
-    "同城短视频": "先选人群和年龄，再生成同城破圈选题。",
-    "团单短视频": "先出套餐转化选题，再生成文案和分镜。"
+    "娴侀噺鐭棰?: "鍏堝嚭鑳借浜哄仠鐣欑殑閫夐锛屽啀鐢熸垚鏂囨鍜屽垎闀溿€?,
+    "鍚屽煄鐭棰?: "鍏堥€変汉缇ゅ拰骞撮緞锛屽啀鐢熸垚鍚屽煄鐮村湀閫夐銆?,
+    "鍥㈠崟鐭棰?: "鍏堝嚭濂楅杞寲閫夐锛屽啀鐢熸垚鏂囨鍜屽垎闀溿€?
   };
-  $("templatePreview").innerHTML = `<strong>当前系列：${escapeHtml(tpl.name)}</strong><span>${escapeHtml(hints[tpl.name] || "系统会结合档案生成选题、文案和分镜。")}</span>`;
+  $("templatePreview").innerHTML = `<strong>褰撳墠绯诲垪锛?{escapeHtml(tpl.name)}</strong><span>${escapeHtml(hints[tpl.name] || "绯荤粺浼氱粨鍚堟。妗堢敓鎴愰€夐銆佹枃妗堝拰鍒嗛暅銆?)}</span>`;
 }
 
 function applyTemplateToScript(overwrite = true) {
@@ -1617,7 +1623,7 @@ function applyTemplateToScript(overwrite = true) {
     $("videoScript").value = "";
   }
   if (!$("resultTitle").value.trim()) {
-    $("resultTitle").value = `${state.activeTemplateCategory}脚本`;
+    $("resultTitle").value = `${state.activeTemplateCategory}鑴氭湰`;
     $("videoTitle").value = $("resultTitle").value;
   }
 }
@@ -1645,29 +1651,29 @@ function normalizeShot(shot, index = 0) {
 
 function getDefaultShots() {
   return [
-    { text: "痛点开场：说出目标客户正在经历的问题", visual: "老板口播或门店环境", materialType: "talking_head" },
-    { text: "解释原因：为什么会出现这个问题", visual: "项目过程或知识卡片", materialType: "process" },
-    { text: "展示证明：流程、环境、反馈或案例", visual: "门店环境 + 顾客反馈", materialType: "feedback" },
-    { text: "行动引导：私信咨询、预约体验或领取团购", visual: "产品图/团购图 + 老板口播", materialType: "product" },
+    { text: "鐥涚偣寮€鍦猴細璇村嚭鐩爣瀹㈡埛姝ｅ湪缁忓巻鐨勯棶棰?, visual: "鑰佹澘鍙ｆ挱鎴栭棬搴楃幆澧?, materialType: "talking_head" },
+    { text: "瑙ｉ噴鍘熷洜锛氫负浠€涔堜細鍑虹幇杩欎釜闂", visual: "椤圭洰杩囩▼鎴栫煡璇嗗崱鐗?, materialType: "process" },
+    { text: "灞曠ず璇佹槑锛氭祦绋嬨€佺幆澧冦€佸弽棣堟垨妗堜緥", visual: "闂ㄥ簵鐜 + 椤惧鍙嶉", materialType: "feedback" },
+    { text: "琛屽姩寮曞锛氱淇″挩璇€侀绾︿綋楠屾垨棰嗗彇鍥㈣喘", visual: "浜у搧鍥?鍥㈣喘鍥?+ 鑰佹澘鍙ｆ挱", materialType: "product" },
   ].map(normalizeShot);
 }
 
 function cleanVoiceoverLine(value = "") {
   return String(value || "")
-    .replace(/^\s*[-*●]\s*/, "")
-    .replace(/^\s*(?:镜头|分镜|段落|第)?\s*[0-9一二三四五六七八九十]+\s*(?:镜|段)?\s*[:：、.．-]\s*/i, "")
-    .replace(/^\s*(?:文案内容|口播文案|文案|口播|台词|说话内容)\s*[:：]\s*/i, "")
-    .replace(/[｜|]\s*(?:拍摄|画面|分镜|场景|动作)\s*[:：].*$/i, "")
-    .replace(/[；;]\s*(?:拍摄|画面|分镜|场景|动作)\s*[:：].*$/i, "")
-    .replace(/[｜|；;]\s*(?:素材|素材分类|视频库)\s*[:：].*$/i, "")
+    .replace(/^\s*[-*鈼廬\s*/, "")
+    .replace(/^\s*(?:闀滃ご|鍒嗛暅|娈佃惤|绗??\s*[0-9涓€浜屼笁鍥涗簲鍏竷鍏節鍗乚+\s*(?:闀渱娈??\s*[:锛氥€?锛?]\s*/i, "")
+    .replace(/^\s*(?:鏂囨鍐呭|鍙ｆ挱鏂囨|鏂囨|鍙ｆ挱|鍙拌瘝|璇磋瘽鍐呭)\s*[:锛歖\s*/i, "")
+    .replace(/[锝渱]\s*(?:鎷嶆憚|鐢婚潰|鍒嗛暅|鍦烘櫙|鍔ㄤ綔)\s*[:锛歖.*$/i, "")
+    .replace(/[锛?]\s*(?:鎷嶆憚|鐢婚潰|鍒嗛暅|鍦烘櫙|鍔ㄤ綔)\s*[:锛歖.*$/i, "")
+    .replace(/[锝渱锛?]\s*(?:绱犳潗|绱犳潗鍒嗙被|瑙嗛搴?\s*[:锛歖.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function cleanVisualLine(value = "") {
   return String(value || "")
-    .replace(/^\s*(?:画面|拍摄|分镜画面|分镜|场景|动作)\s*[:：]\s*/i, "")
-    .replace(/[｜|；;]\s*(?:素材|素材分类|视频库)\s*[:：].*$/i, "")
+    .replace(/^\s*(?:鐢婚潰|鎷嶆憚|鍒嗛暅鐢婚潰|鍒嗛暅|鍦烘櫙|鍔ㄤ綔)\s*[:锛歖\s*/i, "")
+    .replace(/[锝渱锛?]\s*(?:绱犳潗|绱犳潗鍒嗙被|瑙嗛搴?\s*[:锛歖.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -1738,10 +1744,10 @@ function buildShotsFromInputs() {
 }
 
 function parseShotLine(line) {
-  const raw = String(line || "").replace(/^[-*●\s]*/, "").trim();
-  const textMatch = raw.match(/(?:口播文案|文案内容|文案|口播|台词)[:：]\s*([^|｜；;]+)/);
-  const visualMatch = raw.match(/(?:分镜画面|拍摄指导|拍摄|画面|分镜|场景|动作)[:：]\s*([^|｜；;]+)/);
-  const materialMatch = raw.match(/(?:素材分类|需要素材|素材|视频库)[:：]\s*([^|｜；;]+)/);
+  const raw = String(line || "").replace(/^[-*鈼廫s]*/, "").trim();
+  const textMatch = raw.match(/(?:鍙ｆ挱鏂囨|鏂囨鍐呭|鏂囨|鍙ｆ挱|鍙拌瘝)[:锛歖\s*([^|锝滐紱;]+)/);
+  const visualMatch = raw.match(/(?:鍒嗛暅鐢婚潰|鎷嶆憚鎸囧|鎷嶆憚|鐢婚潰|鍒嗛暅|鍦烘櫙|鍔ㄤ綔)[:锛歖\s*([^|锝滐紱;]+)/);
+  const materialMatch = raw.match(/(?:绱犳潗鍒嗙被|闇€瑕佺礌鏉恷绱犳潗|瑙嗛搴?[:锛歖\s*([^|锝滐紱;]+)/);
   const text = cleanVoiceoverLine(textMatch ? textMatch[1] : raw);
   const visual = cleanVisualLine(visualMatch ? visualMatch[1] : "");
   const materialLabel = (materialMatch ? materialMatch[1] : "").trim() || inferMaterialLabel(`${text} ${visual}`);
@@ -1752,7 +1758,7 @@ function parseShotLine(line) {
 
 function splitScriptToShots() {
   if (!$("resultScript").value.trim() && !$("resultPrompts").value.trim()) {
-    toast("请先用 DeepSeek 生成文案和分镜，再导入剪辑镜头");
+    toast("璇峰厛鐢?DeepSeek 鐢熸垚鏂囨鍜屽垎闀滐紝鍐嶅鍏ュ壀杈戦暅澶?);
     return false;
   }
   const builtShots = buildShotsFromInputs();
@@ -1765,20 +1771,20 @@ function splitScriptToShots() {
 }
 
 function inferVisual(line, fallbackLabel) {
-  if (/口播|老板|讲|解释/.test(line)) return "老板口播 / 数字人口播";
-  if (/门店|环境|到店|空间/.test(line)) return "门店环境镜头";
-  if (/过程|流程|操作|项目/.test(line)) return "项目过程特写";
-  if (/反馈|案例|顾客|前后/.test(line)) return "顾客反馈或案例证明";
-  if (/团购|产品|套餐|价格/.test(line)) return "产品/团购权益画面";
+  if (/鍙ｆ挱|鑰佹澘|璁瞸瑙ｉ噴/.test(line)) return "鑰佹澘鍙ｆ挱 / 鏁板瓧浜哄彛鎾?;
+  if (/闂ㄥ簵|鐜|鍒板簵|绌洪棿/.test(line)) return "闂ㄥ簵鐜闀滃ご";
+  if (/杩囩▼|娴佺▼|鎿嶄綔|椤圭洰/.test(line)) return "椤圭洰杩囩▼鐗瑰啓";
+  if (/鍙嶉|妗堜緥|椤惧|鍓嶅悗/.test(line)) return "椤惧鍙嶉鎴栨渚嬭瘉鏄?;
+  if (/鍥㈣喘|浜у搧|濂楅|浠锋牸/.test(line)) return "浜у搧/鍥㈣喘鏉冪泭鐢婚潰";
   return fallbackLabel;
 }
 
 function inferMaterialType(text) {
-  if (/口播|老板|真人|讲解|解释/.test(text)) return "talking_head";
-  if (/门店|环境|门头|前台|商圈|同城|到店|空间/.test(text)) return "scene";
-  if (/过程|流程|操作|护理|服务|项目/.test(text)) return "process";
-  if (/反馈|案例|顾客|评价|前后/.test(text)) return "feedback";
-  if (/团购|产品|套餐|价格|券/.test(text)) return "product";
+  if (/鍙ｆ挱|鑰佹澘|鐪熶汉|璁茶В|瑙ｉ噴/.test(text)) return "talking_head";
+  if (/闂ㄥ簵|鐜|闂ㄥご|鍓嶅彴|鍟嗗湀|鍚屽煄|鍒板簵|绌洪棿/.test(text)) return "scene";
+  if (/杩囩▼|娴佺▼|鎿嶄綔|鎶ょ悊|鏈嶅姟|椤圭洰/.test(text)) return "process";
+  if (/鍙嶉|妗堜緥|椤惧|璇勪环|鍓嶅悗/.test(text)) return "feedback";
+  if (/鍥㈣喘|浜у搧|濂楅|浠锋牸|鍒?.test(text)) return "product";
   return "";
 }
 
@@ -1805,7 +1811,7 @@ function inferAssetLibraryIdForShot(shot = {}) {
     const assets = assetsByLibrary[group.id] || [];
     let score = 0;
     if (name && source.includes(name)) score += 30;
-    name.split(/[\s/_\-、，,]+/).filter(Boolean).forEach((part) => {
+    name.split(/[\s/_\-銆侊紝,]+/).filter(Boolean).forEach((part) => {
       if (part.length >= 2 && source.includes(part)) score += 8;
     });
     const sameTypeAssets = assets.filter((asset) => asset.type === shot.materialType);
@@ -1821,8 +1827,8 @@ function inferAssetLibraryIdForShot(shot = {}) {
 
 function addShot() {
   state.shots.push({
-    text: "新镜头：补充这里要说的内容",
-    visual: "选择适合的画面",
+    text: "鏂伴暅澶达細琛ュ厖杩欓噷瑕佽鐨勫唴瀹?,
+    visual: "閫夋嫨閫傚悎鐨勭敾闈?,
     materialType: "talking_head",
     libraryId: "ungrouped",
     voiceId: "",
@@ -1836,7 +1842,7 @@ function addShot() {
 function removeShot(index) {
   if (!state.shots[index]) return;
   if (state.shots.length <= 1) {
-    toast("至少保留一个镜头");
+    toast("鑷冲皯淇濈暀涓€涓暅澶?);
     return;
   }
   state.shots.splice(index, 1);
@@ -1855,15 +1861,15 @@ function autoMatchShots() {
   renderShotTable();
   renderMixPlan();
   renderCockpit();
-  toast("已按镜头内容重新匹配视频库");
+  toast("宸叉寜闀滃ご鍐呭閲嶆柊鍖归厤瑙嗛搴?);
 }
 
 function clearShotTableView() {
   const body = $("shotTableBody");
   if (body) {
-    body.innerHTML = `<tr><td colspan="4" class="meta">还没有导入镜头。请先在脚本页生成文案和分镜，再点击“导入剪辑镜头”。</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="meta">杩樻病鏈夊鍏ラ暅澶淬€傝鍏堝湪鑴氭湰椤电敓鎴愭枃妗堝拰鍒嗛暅锛屽啀鐐瑰嚮鈥滃鍏ュ壀杈戦暅澶粹€濄€?/td></tr>`;
   }
-  if ($("shotCountLabel")) $("shotCountLabel").textContent = "0 个";
+  if ($("shotCountLabel")) $("shotCountLabel").textContent = "0 涓?;
   const mixPlan = $("mixPlan");
   if (mixPlan) mixPlan.innerHTML = "";
   renderTitleRecommendation();
@@ -1873,12 +1879,12 @@ function renderShotTable() {
   const body = $("shotTableBody");
   if (!body) return;
   ensureShots();
-  if ($("shotCountLabel")) $("shotCountLabel").textContent = `${state.shots.length} 个`;
+  if ($("shotCountLabel")) $("shotCountLabel").textContent = `${state.shots.length} 涓猔;
   body.innerHTML = state.shots.map((shot, index) => `
     <tr>
       <td>
-        <span class="shot-index">镜头 ${index + 1}</span>
-        <button class="shot-delete-btn" type="button" data-shot-action="delete" data-shot="${index}">删除</button>
+        <span class="shot-index">闀滃ご ${index + 1}</span>
+        <button class="shot-delete-btn" type="button" data-shot-action="delete" data-shot="${index}">鍒犻櫎</button>
       </td>
       <td><textarea data-shot="${index}" data-field="text">${escapeHtml(shot.text)}</textarea></td>
       <td><textarea data-shot="${index}" data-field="visual">${escapeHtml(shot.visual)}</textarea></td>
@@ -1918,19 +1924,19 @@ function buildShotLibraryOptions(selected = "ungrouped") {
   const groups = getEditableAssetGroups();
   return groups.map((group) => {
     const count = getAssetsByGroup(group.id).length;
-    return `<option value="${escapeHtml(group.id)}" ${selected === group.id ? "selected" : ""}>${escapeHtml(group.name)}（${count}）</option>`;
+    return `<option value="${escapeHtml(group.id)}" ${selected === group.id ? "selected" : ""}>${escapeHtml(group.name)}锛?{count}锛?/option>`;
   }).join("");
 }
 
 function getAssetMatchLabel(libraryId, materialType) {
   const assets = getAssetsByGroup(libraryId);
   const libraryName = getAssetGroupName(libraryId);
-  if (!assets.length) return `「${libraryName}」暂无素材，生成时会使用占位混剪`;
+  if (!assets.length) return `銆?{libraryName}銆嶆殏鏃犵礌鏉愶紝鐢熸垚鏃朵細浣跨敤鍗犱綅娣峰壀`;
   const preferred = assets.filter((asset) => asset.type === materialType);
   if (preferred.length) {
-    return `从「${libraryName}」匹配 ${preferred.length} 个${assetTypeLabels[materialType] || "素材"}：${preferred.slice(0, 2).map((a) => a.name).join("、")}`;
+    return `浠庛€?{libraryName}銆嶅尮閰?${preferred.length} 涓?{assetTypeLabels[materialType] || "绱犳潗"}锛?{preferred.slice(0, 2).map((a) => a.name).join("銆?)}`;
   }
-  return `「${libraryName}」有 ${assets.length} 个素材，生成时会智能轮换`;
+  return `銆?{libraryName}銆嶆湁 ${assets.length} 涓礌鏉愶紝鐢熸垚鏃朵細鏅鸿兘杞崲`;
 }
 
 function readFileAsDataUrl(file) {
@@ -1940,6 +1946,47 @@ function readFileAsDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+async function uploadAssetThroughOss(file, libraryId, button) {
+  const sign = await api("/api/oss/upload-url", {
+    method: "POST",
+    body: JSON.stringify({
+      name: file.name,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+      type: $("assetType").value || "video",
+      libraryId,
+    }),
+  });
+  if (!sign.uploadUrl || !sign.objectKey) {
+    throw new Error("OSS 涓婁紶绛惧悕鐢熸垚澶辫触");
+  }
+  if (button) button.textContent = "涓婁紶鍒?OSS...";
+  const uploadHeaders = {
+    "Content-Type": file.type || "application/octet-stream",
+    ...(sign.headers || {}),
+  };
+  const uploadRes = await fetch(sign.uploadUrl, {
+    method: sign.method || "PUT",
+    headers: uploadHeaders,
+    body: file,
+  });
+  if (!uploadRes.ok) {
+    throw new Error(`OSS 涓婁紶澶辫触锛?{uploadRes.status}`);
+  }
+  const assetData = await api("/api/assets", {
+    method: "POST",
+    body: JSON.stringify({
+      name: file.name,
+      type: $("assetType").value || "video",
+      libraryId,
+      size: file.size,
+      objectKey: sign.objectKey,
+      url: sign.downloadUrl || sign.publicUrl || "",
+    }),
+  });
+  return assetData.asset;
 }
 
 async function loadAssetGroups() {
@@ -1969,9 +2016,9 @@ function getAssetLibraryId(asset) {
 }
 
 function getAssetGroupName(groupId) {
-  if (groupId === "all") return "全部素材";
+  if (groupId === "all") return "鍏ㄩ儴绱犳潗";
   const group = state.assetGroups.find((item) => item.id === groupId);
-  return group?.name || "未分组";
+  return group?.name || "鏈垎缁?;
 }
 
 function getUsedAssetBytes() {
@@ -2021,28 +2068,28 @@ function toggleLibraryAssetSelection(assetId) {
 async function deleteAsset(assetId) {
   const asset = normalizeList(state.assets).find((item) => item.id === assetId);
   if (!asset) {
-    toast("这个素材不存在或已被删除");
+    toast("杩欎釜绱犳潗涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎");
     return;
   }
-  if (!window.confirm(`确定删除素材：${asset.name || "未命名素材"}？`)) return;
+  if (!window.confirm(`纭畾鍒犻櫎绱犳潗锛?{asset.name || "鏈懡鍚嶇礌鏉?}锛焋)) return;
   await api("/api/assets/delete", {
     method: "POST",
     body: JSON.stringify({ assetId }),
   });
   state.selectedLibraryAssetIds = normalizeList(state.selectedLibraryAssetIds).filter((id) => id !== assetId);
   localStorage.setItem("aivf_selected_library_assets", JSON.stringify(state.selectedLibraryAssetIds));
-  toast("素材已删除");
+  toast("绱犳潗宸插垹闄?);
   await loadAssets();
   renderShotTable();
   renderMixPlan();
 }
 
 async function createAssetGroup() {
-  const name = window.prompt("输入新视频库名称，例如：暑期活动、老客见证、爆款套餐");
+  const name = window.prompt("杈撳叆鏂拌棰戝簱鍚嶇О锛屼緥濡傦細鏆戞湡娲诲姩銆佽€佸瑙佽瘉銆佺垎娆惧椁?);
   const clean = (name || "").trim();
   if (!clean) return;
   if (state.assetGroups.some((group) => group.name === clean)) {
-    toast("这个视频库已经存在");
+    toast("杩欎釜瑙嗛搴撳凡缁忓瓨鍦?);
     return;
   }
   const data = await api("/api/asset-groups", {
@@ -2051,7 +2098,7 @@ async function createAssetGroup() {
   });
   state.assetGroups = normalizeList(data.groups);
   setActiveAssetGroup(data.group?.id || "all");
-  toast(`已创建视频库：${clean}`);
+  toast(`宸插垱寤鸿棰戝簱锛?{clean}`);
 }
 
 function renderAssetQuota() {
@@ -2061,8 +2108,8 @@ function renderAssetQuota() {
   if ($("assetQuotaBar")) $("assetQuotaBar").style.width = `${ratio}%`;
   if ($("assetQuotaHint")) {
     $("assetQuotaHint").textContent = ratio >= 90
-      ? "容量快满了，建议清理无用素材或准备扩容。"
-      : "内部体验版先限制 5GB，后续对外版可按账号扩容。";
+      ? "瀹归噺蹇弧浜嗭紝寤鸿娓呯悊鏃犵敤绱犳潗鎴栧噯澶囨墿瀹广€?
+      : "鍐呴儴浣撻獙鐗堝厛闄愬埗 5GB锛屽悗缁澶栫増鍙寜璐﹀彿鎵╁銆?;
   }
 }
 
@@ -2082,7 +2129,7 @@ function renderAssetLibrary() {
   const grid = $("assetGroupGrid");
   if (grid) {
     const cards = [
-      { id: "all", name: "全部素材", locked: true },
+      { id: "all", name: "鍏ㄩ儴绱犳潗", locked: true },
       ...state.assetGroups,
     ].map((group) => {
       const assets = getAssetsByGroup(group.id);
@@ -2091,11 +2138,11 @@ function renderAssetLibrary() {
       const thumbs = assets.slice(0, 3).map(() => `<span class="library-thumb"></span>`).join("");
       return `<button class="asset-group-card ${active}" data-asset-group-id="${escapeHtml(group.id)}" type="button">
         <div class="asset-group-name">${escapeHtml(group.name)}</div>
-        <div class="asset-group-preview">${thumbs || `<span class="empty-film">▥</span>`}</div>
+        <div class="asset-group-preview">${thumbs || `<span class="empty-film">鈻?/span>`}</div>
         <div class="asset-group-meta">
-          <strong>${assets.length}</strong><span>个素材</span><em>${formatSize(size)}</em>
+          <strong>${assets.length}</strong><span>涓礌鏉?/span><em>${formatSize(size)}</em>
         </div>
-        <span class="asset-group-action">点击管理 / 添加</span>
+        <span class="asset-group-action">鐐瑰嚮绠＄悊 / 娣诲姞</span>
       </button>`;
     });
     grid.innerHTML = cards.join("");
@@ -2113,15 +2160,15 @@ function renderAssetModal() {
   const currentAssets = getAssetsByGroup(state.activeAssetGroupId);
   const currentSize = currentAssets.reduce((sum, asset) => sum + (Number(asset.size) || 0), 0);
   if ($("assetModalTitle")) $("assetModalTitle").textContent = getAssetGroupName(state.activeAssetGroupId);
-  if ($("assetModalMeta")) $("assetModalMeta").textContent = `${currentAssets.length} 个素材 · ${formatSize(currentSize)}`;
+  if ($("assetModalMeta")) $("assetModalMeta").textContent = `${currentAssets.length} 涓礌鏉?路 ${formatSize(currentSize)}`;
   if ($("assetUploadHint")) {
     $("assetUploadHint").textContent = state.activeAssetGroupId === "all"
-      ? "当前查看全部素材；上传时请选择具体视频库。"
-      : `素材会直接进入「${getAssetGroupName(state.activeAssetGroupId)}」。`;
+      ? "褰撳墠鏌ョ湅鍏ㄩ儴绱犳潗锛涗笂浼犳椂璇烽€夋嫨鍏蜂綋瑙嗛搴撱€?
+      : `绱犳潗浼氱洿鎺ヨ繘鍏ャ€?{getAssetGroupName(state.activeAssetGroupId)}銆嶃€俙;
   }
   const list = $("assetList");
   if (list) {
-    list.innerHTML = currentAssets.map(assetCard).join("") || `<div class="library-empty">这个视频库还没有素材。直接在上面选择文件上传。</div>`;
+    list.innerHTML = currentAssets.map(assetCard).join("") || `<div class="library-empty">杩欎釜瑙嗛搴撹繕娌℃湁绱犳潗銆傜洿鎺ュ湪涓婇潰閫夋嫨鏂囦欢涓婁紶銆?/div>`;
   }
 }
 
@@ -2132,24 +2179,33 @@ async function uploadAsset() {
   }
   const file = $("assetFile").files[0];
   if (!file) {
-    toast("先选择文件");
+    toast("鍏堥€夋嫨鏂囦欢");
     return;
   }
   if (getUsedAssetBytes() + file.size > assetQuotaBytes) {
-    toast(`素材库容量不足：当前限制 ${formatSize(assetQuotaBytes)}`);
+    toast(`绱犳潗搴撳閲忎笉瓒筹細褰撳墠闄愬埗 ${formatSize(assetQuotaBytes)}`);
     return;
   }
   const libraryId = $("assetLibrarySelect")?.value || "ungrouped";
   const button = $("uploadAssetBtn");
   const oldText = button?.textContent || "";
   if (file.size >= 50 * 1024 * 1024) {
-    toast(`正在上传 ${formatSize(file.size)}，请不要关闭页面`);
+    toast(`姝ｅ湪涓婁紶 ${formatSize(file.size)}锛岃涓嶈鍏抽棴椤甸潰`);
   }
   if (button) {
     button.disabled = true;
-    button.textContent = `上传中 ${formatSize(file.size)}`;
+    button.textContent = `涓婁紶涓?${formatSize(file.size)}`;
   }
   try {
+    if (configuredApiBaseUrl) {
+      await uploadAssetThroughOss(file, libraryId, button);
+      $("assetFile").value = "";
+      state.activeAssetGroupId = libraryId;
+      localStorage.setItem("aivf_active_asset_group", state.activeAssetGroupId);
+      toast("绱犳潗宸蹭笂浼犲埌 OSS");
+      await loadAssets();
+      return;
+    }
     const headers = {
       "X-Asset-Name": encodeURIComponent(file.name),
       "X-Asset-Type": encodeURIComponent($("assetType").value || "video"),
@@ -2163,12 +2219,12 @@ async function uploadAsset() {
     });
     const data = await res.json();
     if (!res.ok || data.ok === false) {
-      throw new Error(data.error || `上传失败：${res.status}`);
+      throw new Error(data.error || `涓婁紶澶辫触锛?{res.status}`);
     }
     $("assetFile").value = "";
     state.activeAssetGroupId = libraryId;
     localStorage.setItem("aivf_active_asset_group", state.activeAssetGroupId);
-    toast("素材已上传到素材库");
+    toast("绱犳潗宸蹭笂浼犲埌绱犳潗搴?);
     await loadAssets();
     if (state.shots.length) {
       renderShotTable();
@@ -2177,7 +2233,7 @@ async function uploadAsset() {
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = oldText || "上传到当前视频库";
+      button.textContent = oldText || "涓婁紶鍒板綋鍓嶈棰戝簱";
     }
   }
 }
@@ -2200,14 +2256,14 @@ function assetCard(a) {
   const selected = isAssetSelected(a.id);
   return `<div class="library-asset-row ${selected ? "selected" : ""}">
     <div>
-      <div class="card-title">${escapeHtml(a.name || "未命名素材")}</div>
-      <div class="meta">视频库：${escapeHtml(groupName)} · 用途：${escapeHtml(label)}</div>
-      <div class="meta">大小：${formatSize(a.size)} · 时间：${escapeHtml(a.createdAt || "-")}</div>
+      <div class="card-title">${escapeHtml(a.name || "鏈懡鍚嶇礌鏉?)}</div>
+      <div class="meta">瑙嗛搴擄細${escapeHtml(groupName)} 路 鐢ㄩ€旓細${escapeHtml(label)}</div>
+      <div class="meta">澶у皬锛?{formatSize(a.size)} 路 鏃堕棿锛?{escapeHtml(a.createdAt || "-")}</div>
     </div>
     <div class="asset-row-actions">
-      <button class="secondary tiny-btn" type="button" data-select-asset-id="${escapeHtml(a.id)}">${selected ? "已选择" : "选择"}</button>
-      <a class="secondary tiny-btn" href="${a.url}" target="_blank">打开</a>
-      <button class="danger tiny-btn" type="button" data-delete-asset-id="${escapeHtml(a.id)}">删除</button>
+      <button class="secondary tiny-btn" type="button" data-select-asset-id="${escapeHtml(a.id)}">${selected ? "宸查€夋嫨" : "閫夋嫨"}</button>
+      <a class="secondary tiny-btn" href="${a.url}" target="_blank">鎵撳紑</a>
+      <button class="danger tiny-btn" type="button" data-delete-asset-id="${escapeHtml(a.id)}">鍒犻櫎</button>
     </div>
   </div>`;
   scheduleWorkspaceDraftSave();
@@ -2217,37 +2273,37 @@ function renderAssetOptions() {
   const sampleTypes = ["voice_sample", "talking_head", "audio", "video", "bgm"];
   const audioAssets = normalizeList(state.assets).filter((a) => sampleTypes.includes(a.type));
   if ($("voiceSampleSelect")) {
-    $("voiceSampleSelect").innerHTML = audioAssets.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("") || `<option value="">先上传声音样本或口播视频</option>`;
+    $("voiceSampleSelect").innerHTML = audioAssets.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("") || `<option value="">鍏堜笂浼犲０闊虫牱鏈垨鍙ｆ挱瑙嗛</option>`;
   }
 }
 
 async function createVoice() {
   const name = $("voiceName").value.trim();
   if (!name) {
-    toast("填写声音名称");
+    toast("濉啓澹伴煶鍚嶇О");
     return;
   }
   const consent = $("voiceConsent").checked;
   const sampleAssetId = $("voiceSampleSelect").value;
   if (!sampleAssetId) {
-    toast("先选择声音样本");
+    toast("鍏堥€夋嫨澹伴煶鏍锋湰");
     return;
   }
   const btn = $("createVoiceBtn");
   const oldText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "声音克隆中...";
+  btn.textContent = "澹伴煶鍏嬮殕涓?..";
   try {
     const data = await api("/api/voices/clone", {
       method: "POST",
       body: JSON.stringify({ name, consent, sampleAssetId }),
     });
     if (data.voice?.status !== "ready") {
-      throw new Error("声音克隆失败：请重新上传清晰声音样本");
+      throw new Error("澹伴煶鍏嬮殕澶辫触锛氳閲嶆柊涓婁紶娓呮櫚澹伴煶鏍锋湰");
     }
     $("voiceName").value = "";
     $("voiceConsent").checked = false;
-    toast(`声音克隆已完成：${data.voice.name}`);
+    toast(`澹伴煶鍏嬮殕宸插畬鎴愶細${data.voice.name}`);
     await loadVoices();
   } finally {
     btn.disabled = false;
@@ -2258,15 +2314,15 @@ async function createVoice() {
 async function deleteVoice(voiceId) {
   const voice = normalizeList(state.voices).find((item) => item.id === voiceId);
   if (!voice) {
-    toast("这个声音不存在或已被删除");
+    toast("杩欎釜澹伴煶涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎");
     return;
   }
-  if (!window.confirm(`确定删除声音：${voice.name || "未命名声音"}？`)) return;
+  if (!window.confirm(`纭畾鍒犻櫎澹伴煶锛?{voice.name || "鏈懡鍚嶅０闊?}锛焋)) return;
   await api("/api/voices/delete", {
     method: "POST",
     body: JSON.stringify({ voiceId }),
   });
-  toast("声音已删除");
+  toast("澹伴煶宸插垹闄?);
   await loadVoices();
 }
 
@@ -2282,7 +2338,7 @@ async function loadVoices() {
 function buildGlobalVoiceOptions(selected = "") {
   const voices = normalizeList(state.voices);
   const localSelected = selected ? "" : "selected";
-  const options = [`<option value="" ${localSelected}>默认本地声音</option>`];
+  const options = [`<option value="" ${localSelected}>榛樿鏈湴澹伴煶</option>`];
   voices.forEach((v, index) => {
     options.push(`<option value="${escapeHtml(v.id)}" ${selected === v.id ? "selected" : ""}>${escapeHtml(getVoiceDisplayName(v, index))}</option>`);
   });
@@ -2292,7 +2348,7 @@ function buildGlobalVoiceOptions(selected = "") {
 function buildShotVoiceOptions(selected = "") {
   const voices = normalizeList(state.voices);
   const defaultSelected = selected ? "" : "selected";
-  const options = [`<option value="" ${defaultSelected}>跟随全片声音</option>`];
+  const options = [`<option value="" ${defaultSelected}>璺熼殢鍏ㄧ墖澹伴煶</option>`];
   voices.forEach((v, index) => {
     options.push(`<option value="${escapeHtml(v.id)}" ${selected === v.id ? "selected" : ""}>${escapeHtml(getVoiceDisplayName(v, index))}</option>`);
   });
@@ -2300,12 +2356,12 @@ function buildShotVoiceOptions(selected = "") {
 }
 
 function getShotVoiceLabel(voiceId) {
-  if (!voiceId) return "默认跟随全片声音";
+  if (!voiceId) return "榛樿璺熼殢鍏ㄧ墖澹伴煶";
   const voices = normalizeList(state.voices);
   const voiceIndex = voices.findIndex((v) => v.id === voiceId);
   const voice = voices[voiceIndex];
-  if (!voice) return "该声音档案不存在";
-  return `${getVoiceDisplayName(voice, voiceIndex)} · 可用`;
+  if (!voice) return "璇ュ０闊虫。妗堜笉瀛樺湪";
+  return `${getVoiceDisplayName(voice, voiceIndex)} 路 鍙敤`;
 }
 
 function getControlValue(primaryId, fallbackId, fallbackValue = "") {
@@ -2376,7 +2432,7 @@ function syncPairedRanges(primaryId, fallbackId) {
 }
 
 function getTitleTemplateHint(style) {
-  return titleTemplateLibrary[style] || titleTemplateLibrary["智能推荐样式"];
+  return titleTemplateLibrary[style] || titleTemplateLibrary["鏅鸿兘鎺ㄨ崘鏍峰紡"];
 }
 
 function getRecommendedTitleStyle() {
@@ -2389,49 +2445,49 @@ function getRecommendedTitleStyle() {
     $("videoScript")?.value,
     ...normalizeList(state.shots).flatMap((shot) => [shot.text, shot.visual]),
   ].join(" ");
-  if (!source.trim()) return "智能推荐样式";
-  if (/团购|团单|套餐|价格|优惠|福利|到店|下单|购买|领取/.test(source) || state.activeTemplateCategory === "团单短视频") {
-    return "团购成交标题";
+  if (!source.trim()) return "鏅鸿兘鎺ㄨ崘鏍峰紡";
+  if (/鍥㈣喘|鍥㈠崟|濂楅|浠锋牸|浼樻儬|绂忓埄|鍒板簵|涓嬪崟|璐拱|棰嗗彇/.test(source) || state.activeTemplateCategory === "鍥㈠崟鐭棰?) {
+    return "鍥㈣喘鎴愪氦鏍囬";
   }
-  if (/同城|附近|城市|广州|深圳|佛山|商圈|下班|天气|周末|本地|门店|到店/.test(source) || state.activeTemplateCategory === "同城短视频") {
-    return "同城场景标题";
+  if (/鍚屽煄|闄勮繎|鍩庡競|骞垮窞|娣卞湷|浣涘北|鍟嗗湀|涓嬬彮|澶╂皵|鍛ㄦ湯|鏈湴|闂ㄥ簵|鍒板簵/.test(source) || state.activeTemplateCategory === "鍚屽煄鐭棰?) {
+    return "鍚屽煄鍦烘櫙鏍囬";
   }
-  if (/避坑|踩坑|别再|不要|第一次|新手|注意|真相|套路/.test(source)) {
-    return "避坑提醒标题";
+  if (/閬垮潙|韪╁潙|鍒啀|涓嶈|绗竴娆鏂版墜|娉ㄦ剰|鐪熺浉|濂楄矾/.test(source)) {
+    return "閬垮潙鎻愰啋鏍囬";
   }
-  if (/为什么|凭什么|没想到|竟然|反差|普通|但是|原来/.test(source)) {
-    return "反差悬念标题";
+  if (/涓轰粈涔坾鍑粈涔坾娌℃兂鍒皘绔熺劧|鍙嶅樊|鏅€殀浣嗘槸|鍘熸潵/.test(source)) {
+    return "鍙嶅樊鎮康鏍囬";
   }
-  if (/[三3]个|[四4]个|[五5]个|清单|标准|步骤|方法/.test(source)) {
-    return "数字清单标题";
+  if (/[涓?]涓獆[鍥?]涓獆[浜?]涓獆娓呭崟|鏍囧噯|姝ラ|鏂规硶/.test(source)) {
+    return "鏁板瓧娓呭崟鏍囬";
   }
-  if (/真实|测评|体验|反馈|案例|对比|前后/.test(source)) {
-    return "真实测评标题";
+  if (/鐪熷疄|娴嬭瘎|浣撻獙|鍙嶉|妗堜緥|瀵规瘮|鍓嶅悗/.test(source)) {
+    return "鐪熷疄娴嬭瘎鏍囬";
   }
-  if (/效果|结果|改善|变好|解决|提升/.test(source)) {
-    return "结果承诺标题";
+  if (/鏁堟灉|缁撴灉|鏀瑰杽|鍙樺ソ|瑙ｅ喅|鎻愬崌/.test(source)) {
+    return "缁撴灉鎵胯鏍囬";
   }
-  return "痛点钩子标题";
+  return "鐥涚偣閽╁瓙鏍囬";
 }
 
 function getTitleRecommendationReason(style) {
   const map = {
-    "智能推荐样式": "导入脚本后自动判断标题方向。",
-    "痛点钩子标题": "当前文案主要在讲客户卡点，先用痛点抓停留。",
-    "反差悬念标题": "当前内容有反差或解释逻辑，用悬念更容易让人看完。",
-    "数字清单标题": "当前内容适合拆成步骤或标准，数字标题更利于收藏。",
-    "同城场景标题": "当前内容带城市、门店或附近场景，用同城切口更容易圈附近人。",
-    "避坑提醒标题": "当前内容有提醒和教育属性，用避坑标题更容易建立信任。",
-    "结果承诺标题": "当前内容更偏结果表达，用结果标题能降低理解成本。",
-    "真实测评标题": "当前内容偏体验、案例或反馈，用真实测评标题更自然。",
-    "团购成交标题": "当前内容带套餐、福利或到店转化，用成交标题更适合收口。",
+    "鏅鸿兘鎺ㄨ崘鏍峰紡": "瀵煎叆鑴氭湰鍚庤嚜鍔ㄥ垽鏂爣棰樻柟鍚戙€?,
+    "鐥涚偣閽╁瓙鏍囬": "褰撳墠鏂囨涓昏鍦ㄨ瀹㈡埛鍗＄偣锛屽厛鐢ㄧ棝鐐规姄鍋滅暀銆?,
+    "鍙嶅樊鎮康鏍囬": "褰撳墠鍐呭鏈夊弽宸垨瑙ｉ噴閫昏緫锛岀敤鎮康鏇村鏄撹浜虹湅瀹屻€?,
+    "鏁板瓧娓呭崟鏍囬": "褰撳墠鍐呭閫傚悎鎷嗘垚姝ラ鎴栨爣鍑嗭紝鏁板瓧鏍囬鏇村埄浜庢敹钘忋€?,
+    "鍚屽煄鍦烘櫙鏍囬": "褰撳墠鍐呭甯﹀煄甯傘€侀棬搴楁垨闄勮繎鍦烘櫙锛岀敤鍚屽煄鍒囧彛鏇村鏄撳湀闄勮繎浜恒€?,
+    "閬垮潙鎻愰啋鏍囬": "褰撳墠鍐呭鏈夋彁閱掑拰鏁欒偛灞炴€э紝鐢ㄩ伩鍧戞爣棰樻洿瀹规槗寤虹珛淇′换銆?,
+    "缁撴灉鎵胯鏍囬": "褰撳墠鍐呭鏇村亸缁撴灉琛ㄨ揪锛岀敤缁撴灉鏍囬鑳介檷浣庣悊瑙ｆ垚鏈€?,
+    "鐪熷疄娴嬭瘎鏍囬": "褰撳墠鍐呭鍋忎綋楠屻€佹渚嬫垨鍙嶉锛岀敤鐪熷疄娴嬭瘎鏍囬鏇磋嚜鐒躲€?,
+    "鍥㈣喘鎴愪氦鏍囬": "褰撳墠鍐呭甯﹀椁愩€佺鍒╂垨鍒板簵杞寲锛岀敤鎴愪氦鏍囬鏇撮€傚悎鏀跺彛銆?,
   };
-  return map[style] || map["智能推荐样式"];
+  return map[style] || map["鏅鸿兘鎺ㄨ崘鏍峰紡"];
 }
 
 function renderTitleRecommendation() {
   const style = getRecommendedTitleStyle();
-  if ($("editorRecommendedTitleStyle")) $("editorRecommendedTitleStyle").textContent = style === "智能推荐样式" ? "等待脚本内容" : `推荐：${style}`;
+  if ($("editorRecommendedTitleStyle")) $("editorRecommendedTitleStyle").textContent = style === "鏅鸿兘鎺ㄨ崘鏍峰紡" ? "绛夊緟鑴氭湰鍐呭" : `鎺ㄨ崘锛?{style}`;
   if ($("editorTitleTemplateHint")) {
     $("editorTitleTemplateHint").textContent = `${getTitleRecommendationReason(style)} ${getTitleTemplateHint(style)}`;
   }
@@ -2439,8 +2495,8 @@ function renderTitleRecommendation() {
 }
 
 function updateTitleTemplateHints() {
-  const scriptStyle = getControlValue("scriptTitleStyle", "editorTitleStyle", "智能推荐样式");
-  const exportStyle = getControlValue("titleStyle", "editorTitleStyle", "智能推荐样式");
+  const scriptStyle = getControlValue("scriptTitleStyle", "editorTitleStyle", "鏅鸿兘鎺ㄨ崘鏍峰紡");
+  const exportStyle = getControlValue("titleStyle", "editorTitleStyle", "鏅鸿兘鎺ㄨ崘鏍峰紡");
   if ($("scriptTitleTemplateHint")) $("scriptTitleTemplateHint").textContent = getTitleTemplateHint(scriptStyle);
   renderTitleRecommendation();
   if ($("titleTemplateHint")) $("titleTemplateHint").textContent = getTitleTemplateHint(exportStyle);
@@ -2456,15 +2512,15 @@ function renderVoiceOptions() {
 
 function getVoiceStatusLabel(status) {
   const map = {
-    ready: "可用",
-    api_pending: "待配置 API",
-    api_failed: "克隆失败",
+    ready: "鍙敤",
+    api_pending: "寰呴厤缃?API",
+    api_failed: "鍏嬮殕澶辫触",
   };
-  return map[status] || status || "待接入";
+  return map[status] || status || "寰呮帴鍏?;
 }
 
 function getVoiceDisplayName(voice, index = 0) {
-  return `声音项目 ${index + 1}`;
+  return `澹伴煶椤圭洰 ${index + 1}`;
 }
 
 function renderVoiceList() {
@@ -2472,7 +2528,7 @@ function renderVoiceList() {
   if (!box) return;
   const voices = normalizeList(state.voices);
   if (!voices.length) {
-    box.innerHTML = `<div class="voice-item muted">还没有可用声音</div>`;
+    box.innerHTML = `<div class="voice-item muted">杩樻病鏈夊彲鐢ㄥ０闊?/div>`;
     return;
   }
   box.innerHTML = voices.map((voice, index) => {
@@ -2480,9 +2536,9 @@ function renderVoiceList() {
     return `<div class="voice-item ${voice.status === "ready" ? "ready" : ""}">
       <div>
         <strong>${escapeHtml(displayName)}</strong>
-        <span>可用 · 可用于剪辑配音</span>
+        <span>鍙敤 路 鍙敤浜庡壀杈戦厤闊?/span>
       </div>
-      <button class="danger tiny-btn" type="button" data-delete-voice-id="${escapeHtml(voice.id)}">删除</button>
+      <button class="danger tiny-btn" type="button" data-delete-voice-id="${escapeHtml(voice.id)}">鍒犻櫎</button>
     </div>`;
   }).join("");
 }
@@ -2504,14 +2560,14 @@ function renderMixPlan() {
     const preferred = assets.filter((asset) => asset.type === shot.materialType);
     const asset = preferred[0] || assets[0];
     const assetLabel = asset
-      ? `${getAssetGroupName(libraryId)}：${asset.name}`
-      : `${getAssetGroupName(libraryId)}：待上传`;
+      ? `${getAssetGroupName(libraryId)}锛?{asset.name}`
+      : `${getAssetGroupName(libraryId)}锛氬緟涓婁紶`;
     return `<div class="timeline-item">
-      <strong>镜头 ${index + 1}</strong>
+      <strong>闀滃ご ${index + 1}</strong>
       <div>
         <div>${escapeHtml(shot.text)}</div>
-        <div class="meta">画面：${escapeHtml(shot.visual)}</div>
-        <div class="meta">视频库素材：${escapeHtml(assetLabel)}</div>
+        <div class="meta">鐢婚潰锛?{escapeHtml(shot.visual)}</div>
+        <div class="meta">瑙嗛搴撶礌鏉愶細${escapeHtml(assetLabel)}</div>
       </div>
     </div>`;
   });
@@ -2524,7 +2580,7 @@ function renderEditorMaterialNotice() {
   if (!notice) return;
   if (!state.shots.length) {
     notice.classList.remove("hidden");
-    notice.innerHTML = `<strong>剪辑前先导入镜头</strong><span>请先到脚本页生成文案和分镜，再点击“导入剪辑镜头”。</span>`;
+    notice.innerHTML = `<strong>鍓緫鍓嶅厛瀵煎叆闀滃ご</strong><span>璇峰厛鍒拌剼鏈〉鐢熸垚鏂囨鍜屽垎闀滐紝鍐嶇偣鍑烩€滃鍏ュ壀杈戦暅澶粹€濄€?/span>`;
     return;
   }
   ensureShots();
@@ -2537,22 +2593,22 @@ function renderEditorMaterialNotice() {
     : requiredLibraryIds;
   const missing = [];
   if (!assets.length) {
-    missing.push("还没有上传任何视频素材");
+    missing.push("杩樻病鏈変笂浼犱换浣曡棰戠礌鏉?);
   } else if (missingLibraryIds.length) {
-    const labels = missingLibraryIds.slice(0, 4).map((id) => getAssetGroupName(id)).join("、");
-    missing.push(`缺少 ${labels}${missingLibraryIds.length > 4 ? " 等视频库素材" : ""}`);
+    const labels = missingLibraryIds.slice(0, 4).map((id) => getAssetGroupName(id)).join("銆?);
+    missing.push(`缂哄皯 ${labels}${missingLibraryIds.length > 4 ? " 绛夎棰戝簱绱犳潗" : ""}`);
   }
   if (!voices.length) {
-    missing.push("还没有创建声音档案");
+    missing.push("杩樻病鏈夊垱寤哄０闊虫。妗?);
   }
   notice.classList.toggle("hidden", !missing.length);
   const nextAction = (missingLibraryIds.length || !assets.length) && !voices.length
-    ? "添加素材和声音"
+    ? "娣诲姞绱犳潗鍜屽０闊?
     : !voices.length
-      ? "创建声音档案"
-      : "补齐对应视频库素材";
+      ? "鍒涘缓澹伴煶妗ｆ"
+      : "琛ラ綈瀵瑰簲瑙嗛搴撶礌鏉?;
   notice.innerHTML = missing.length
-    ? `<strong>剪辑前先补齐视频库</strong><span id="editorMaterialNoticeText">${escapeHtml(`${missing.join("；")}。请先到视频库${nextAction}，再回来做镜头匹配。`)}</span>`
+    ? `<strong>鍓緫鍓嶅厛琛ラ綈瑙嗛搴?/strong><span id="editorMaterialNoticeText">${escapeHtml(`${missing.join("锛?)}銆傝鍏堝埌瑙嗛搴?{nextAction}锛屽啀鍥炴潵鍋氶暅澶村尮閰嶃€俙)}</span>`
     : "";
 }
 
@@ -2582,27 +2638,27 @@ function renderCockpit() {
 function renderDashboardHeader() {
   if (!$("dashboardDirection")) return;
   const service = $("copyRaw")?.value.trim();
-  const style = $("copyStyle")?.value || "成交型";
+  const style = $("copyStyle")?.value || "鎴愪氦鍨?;
   const title = $("resultTitle")?.value.trim();
   const goal = $("userGoal")?.value.trim();
   const audience = $("targetAudience")?.value.trim();
-  $("dashboardDirection").textContent = title || service || `${style.replace("型", "")}内容 · 门店获客`;
-  $("dashboardGoal").textContent = goal || (audience ? `吸引 ${audience} 到店咨询并体验` : "吸引 25-40 岁女性到店咨询并体验");
+  $("dashboardDirection").textContent = title || service || `${style.replace("鍨?, "")}鍐呭 路 闂ㄥ簵鑾峰`;
+  $("dashboardGoal").textContent = goal || (audience ? `鍚稿紩 ${audience} 鍒板簵鍜ㄨ骞朵綋楠宍 : "鍚稿紩 25-40 宀佸コ鎬у埌搴楀挩璇㈠苟浣撻獙");
   if ($("researchStateBadge")) {
-    $("researchStateBadge").textContent = "调研完成";
+    $("researchStateBadge").textContent = "璋冪爺瀹屾垚";
   }
 }
 
 function renderDashboardScriptRows() {
   const container = $("dashboardScriptRows");
   if (!container) return;
-  const names = ["开场吸引", "问题共鸣", "方案展示", "效果对比", "行动号召"];
+  const names = ["寮€鍦哄惛寮?, "闂鍏遍福", "鏂规灞曠ず", "鏁堟灉瀵规瘮", "琛屽姩鍙峰彫"];
   const durations = ["0:00 - 0:05", "0:05 - 0:15", "0:15 - 0:35", "0:35 - 0:50", "0:50 - 1:00"];
   const rows = state.shots.slice(0, 5).map((shot, index) => ({
-    name: names[index] || `镜头 ${index + 1}`,
+    name: names[index] || `闀滃ご ${index + 1}`,
     duration: durations[index] || "",
-    visual: shot.visual || assetTypeLabels[shot.materialType] || "门店素材",
-    text: shot.text || "补充镜头文案",
+    visual: shot.visual || assetTypeLabels[shot.materialType] || "闂ㄥ簵绱犳潗",
+    text: shot.text || "琛ュ厖闀滃ご鏂囨",
   }));
   container.innerHTML = rows.map((row) => `
     <div class="script-row">
@@ -2611,8 +2667,8 @@ function renderDashboardScriptRows() {
         <span>${escapeHtml(row.duration)}</span>
       </div>
       <div class="script-copy">
-        <b>镜头：</b>${escapeHtml(row.visual)}<br>
-        <b>文案：</b>${escapeHtml(row.text)}
+        <b>闀滃ご锛?/b>${escapeHtml(row.visual)}<br>
+        <b>鏂囨锛?/b>${escapeHtml(row.text)}
       </div>
     </div>
   `).join("");
@@ -2628,24 +2684,24 @@ function renderMaterialChecklist() {
   });
   const missing = rows.filter((row) => !row.ready).length;
   const ready = rows.length - missing;
-  if ($("missingCount")) $("missingCount").textContent = `缺少素材 ${missing} 项`;
-  if ($("readyCount")) $("readyCount").textContent = `已有素材 ${ready} 项`;
-  if ($("missingSummaryTitle")) $("missingSummaryTitle").textContent = missing ? `缺少 ${missing} 项关键素材` : "关键素材已补齐";
-  if ($("missingSummaryText")) $("missingSummaryText").textContent = missing ? "建议优先补齐缺口，提升视频转化效果" : "可以进入成品库存，生成内部演示视频";
+  if ($("missingCount")) $("missingCount").textContent = `缂哄皯绱犳潗 ${missing} 椤筦;
+  if ($("readyCount")) $("readyCount").textContent = `宸叉湁绱犳潗 ${ready} 椤筦;
+  if ($("missingSummaryTitle")) $("missingSummaryTitle").textContent = missing ? `缂哄皯 ${missing} 椤瑰叧閿礌鏉恅 : "鍏抽敭绱犳潗宸茶ˉ榻?;
+  if ($("missingSummaryText")) $("missingSummaryText").textContent = missing ? "寤鸿浼樺厛琛ラ綈缂哄彛锛屾彁鍗囪棰戣浆鍖栨晥鏋? : "鍙互杩涘叆鎴愬搧搴撳瓨锛岀敓鎴愬唴閮ㄦ紨绀鸿棰?;
   if ($("nextSuggestionText")) {
     $("nextSuggestionText").textContent = missing
-      ? "完善镜头脚本并准备所需素材，让视频更出彩"
-      : "素材已基本齐全，可以进入成品库存";
+      ? "瀹屽杽闀滃ご鑴氭湰骞跺噯澶囨墍闇€绱犳潗锛岃瑙嗛鏇村嚭褰?
+      : "绱犳潗宸插熀鏈綈鍏紝鍙互杩涘叆鎴愬搧搴撳瓨";
   }
-  if ($("suggestionActionBtn")) $("suggestionActionBtn").textContent = missing ? "›" : "成";
+  if ($("suggestionActionBtn")) $("suggestionActionBtn").textContent = missing ? "鈥? : "鎴?;
   list.innerHTML = rows.map((row) => `
     <div class="material-row">
       <div class="material-title">
         <strong>${escapeHtml(row.title)}</strong>
         <span>${escapeHtml(row.subtitle)}</span>
       </div>
-      <div class="status ${row.ready ? "ready" : "missing"}">${row.ready ? "✓ 已有" : "● 缺少"}</div>
-      <div>${row.count} ${row.type === "bgm" ? "首" : "条"}</div>
+      <div class="status ${row.ready ? "ready" : "missing"}">${row.ready ? "鉁?宸叉湁" : "鈼?缂哄皯"}</div>
+      <div>${row.count} ${row.type === "bgm" ? "棣? : "鏉?}</div>
       <div>${renderMaterialAction(row)}</div>
     </div>
   `).join("");
@@ -2653,7 +2709,7 @@ function renderMaterialChecklist() {
 
 function renderMaterialAction(row) {
   if (!row.ready) {
-    return `<button class="upload-chip" data-upload-type="${row.type}">＋ ${escapeHtml(row.missingAction)}</button>`;
+    return `<button class="upload-chip" data-upload-type="${row.type}">锛?${escapeHtml(row.missingAction)}</button>`;
   }
   const shown = Math.min(row.count, 3);
   return `<div class="thumbs">${Array.from({ length: shown }).map(() => `<span class="thumb"></span>`).join("")}</div>`;
@@ -2676,10 +2732,10 @@ async function generateTts() {
     ? buildVoiceoverText([], $("ttsText").value.trim())
     : buildVoiceoverText(renderShots, $("resultScript").value.trim());
   if (!text) {
-    toast("先生成或填写配音文本");
+    toast("鍏堢敓鎴愭垨濉啓閰嶉煶鏂囨湰");
     return;
   }
-  $("exportStatus").textContent = "配音生成中...";
+  $("exportStatus").textContent = "閰嶉煶鐢熸垚涓?..";
   const data = await api("/api/tts", {
     method: "POST",
     body: JSON.stringify({
@@ -2688,11 +2744,11 @@ async function generateTts() {
       voiceSpeed: getSelectedVoiceSpeed(),
     }),
   });
-  $("exportStatus").textContent = "配音已生成，可以继续生成成片";
+  $("exportStatus").textContent = "閰嶉煶宸茬敓鎴愶紝鍙互缁х画鐢熸垚鎴愮墖";
   state.lastRender = data.job;
   renderLatestExport();
   scheduleWorkspaceDraftSave();
-  toast("配音任务完成");
+  toast("閰嶉煶浠诲姟瀹屾垚");
 }
 
 function blobToDataUrl(blob) {
@@ -2706,23 +2762,23 @@ function blobToDataUrl(blob) {
 
 async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
   if (!text || !voiceId) return null;
-  $("exportStatus").textContent = "克隆音色配音生成中...";
+  $("exportStatus").textContent = "鍏嬮殕闊宠壊閰嶉煶鐢熸垚涓?..";
   const ttsData = await api("/api/tts", {
     method: "POST",
     body: JSON.stringify({ text, voiceId, voiceSpeed }),
   });
   const outputUrl = ttsData?.job?.outputUrl;
   if (!outputUrl) return null;
-  $("exportStatus").textContent = "配音已生成，正在加入剪辑...";
+  $("exportStatus").textContent = "閰嶉煶宸茬敓鎴愶紝姝ｅ湪鍔犲叆鍓緫...";
   const response = await fetch(outputUrl);
-  if (!response.ok) throw new Error("配音文件读取失败");
+  if (!response.ok) throw new Error("閰嶉煶鏂囦欢璇诲彇澶辫触");
   const blob = await response.blob();
   const dataUrl = await blobToDataUrl(blob);
   const ext = (outputUrl.match(/\.(mp3|wav|m4a|aac)(?:$|\?)/i)?.[1] || "mp3").toLowerCase();
   const assetData = await api("/api/assets", {
     method: "POST",
     body: JSON.stringify({
-      name: `自动配音-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`,
+      name: `鑷姩閰嶉煶-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`,
       type: "voiceover",
       libraryId: "ungrouped",
       dataUrl,
@@ -2740,20 +2796,20 @@ async function generateVideo() {
   }
   syncExportFields();
   if (!state.shots.length) {
-    toast("请先在脚本页点击“导入剪辑镜头”，再生成成片");
+    toast("璇峰厛鍦ㄨ剼鏈〉鐐瑰嚮鈥滃鍏ュ壀杈戦暅澶粹€濓紝鍐嶇敓鎴愭垚鐗?);
     return false;
   }
   const renderShots = buildRenderShots();
-  const title = $("videoTitle").value.trim() || "内部测试视频";
+  const title = $("videoTitle").value.trim() || "鍐呴儴娴嬭瘯瑙嗛";
   const script = $("videoScript").value.trim();
   const voiceoverText = buildVoiceoverText(renderShots, script);
   if (!voiceoverText) {
-    toast("先生成或填写视频脚本");
+    toast("鍏堢敓鎴愭垨濉啓瑙嗛鑴氭湰");
     return false;
   }
   const lipSyncMode = "off";
   const recommendedTitleStyle = getRecommendedTitleStyle();
-  $("exportStatus").textContent = "成片任务处理中：正在生成配音和自动剪辑...";
+  $("exportStatus").textContent = "鎴愮墖浠诲姟澶勭悊涓細姝ｅ湪鐢熸垚閰嶉煶鍜岃嚜鍔ㄥ壀杈?..";
   const voiceId = getSelectedVoiceId();
   const voiceSpeed = getSelectedVoiceSpeed();
   let assetIds = getRenderAssetIdsForShots();
@@ -2764,10 +2820,10 @@ async function generateVideo() {
         assetIds = Array.from(new Set([...assetIds, voiceAsset.id]));
       }
     } catch (error) {
-      toast(`配音生成失败，先生成无配音视频：${error.message}`);
+      toast(`閰嶉煶鐢熸垚澶辫触锛屽厛鐢熸垚鏃犻厤闊宠棰戯細${error.message}`);
     }
   }
-  $("exportStatus").textContent = "成片合成中，请保持页面打开...";
+  $("exportStatus").textContent = "鎴愮墖鍚堟垚涓紝璇蜂繚鎸侀〉闈㈡墦寮€...";
   const payload = {
     title,
     script: voiceoverText,
@@ -2776,10 +2832,10 @@ async function generateVideo() {
     shots: renderShots.map((shot) => ({ ...shot, voiceId: "" })),
     settings: {
       count: Number(getControlValue("renderCount", "", "1") || 1),
-      subtitleStyle: "玫红高亮字幕",
+      subtitleStyle: "鐜孩楂樹寒瀛楀箷",
       titleStyle: recommendedTitleStyle,
       titleTemplateHint: getTitleTemplateHint(recommendedTitleStyle),
-      bgmMode: getControlValue("editorBgmMode", "bgmMode", "智能推荐 BGM"),
+      bgmMode: getControlValue("editorBgmMode", "bgmMode", "鏅鸿兘鎺ㄨ崘 BGM"),
       voiceSpeed,
       lipSyncMode,
     }
@@ -2789,9 +2845,9 @@ async function generateVideo() {
     body: JSON.stringify(payload),
   });
   state.lastRender = data.job;
-  $("exportStatus").textContent = data.job.status === "done" ? "成片已生成，可以下载" : "成片生成失败";
+  $("exportStatus").textContent = data.job.status === "done" ? "鎴愮墖宸茬敓鎴愶紝鍙互涓嬭浇" : "鎴愮墖鐢熸垚澶辫触";
   renderLatestExport();
-  toast(data.job.status === "done" ? "视频已生成" : "视频生成失败");
+  toast(data.job.status === "done" ? "瑙嗛宸茬敓鎴? : "瑙嗛鐢熸垚澶辫触");
   return data.job.status === "done";
 }
 
@@ -2811,7 +2867,7 @@ function getRenderAssetIdsForShots() {
 
 async function oneClickEditVideo() {
   if (!state.shots.length) {
-    toast("请先在脚本页点击“导入剪辑镜头”，再一键成品剪辑");
+    toast("璇峰厛鍦ㄨ剼鏈〉鐐瑰嚮鈥滃鍏ュ壀杈戦暅澶粹€濓紝鍐嶄竴閿垚鍝佸壀杈?);
     switchTab("scriptTab");
     return;
   }
@@ -2819,7 +2875,7 @@ async function oneClickEditVideo() {
   const button = $("oneClickEditBtn");
   if (button) {
     button.disabled = true;
-    button.textContent = "正在剪辑...";
+    button.textContent = "姝ｅ湪鍓緫...";
   }
   startEditProgress();
   try {
@@ -2830,7 +2886,7 @@ async function oneClickEditVideo() {
     if (editProgressTimer) stopEditProgress(false);
     if (button) {
       button.disabled = false;
-      button.textContent = "一键成品剪辑";
+      button.textContent = "涓€閿垚鍝佸壀杈?;
     }
   }
 }
@@ -2893,11 +2949,11 @@ function renderLatestExport() {
   if (!jobs.length) {
     container.innerHTML = `<div class="finished-video-card">
       <div class="finished-video-preview">
-        <div class="finished-video-empty">还没有成片<br>完成剪辑后会自动保存到这里</div>
+        <div class="finished-video-empty">杩樻病鏈夋垚鐗?br>瀹屾垚鍓緫鍚庝細鑷姩淇濆瓨鍒拌繖閲?/div>
       </div>
       <div class="finished-video-body">
-        <h3>等待生成成片</h3>
-        <div class="meta">点击剪辑页“一键成品剪辑”后，这里会展示成品效果。</div>
+        <h3>绛夊緟鐢熸垚鎴愮墖</h3>
+        <div class="meta">鐐瑰嚮鍓緫椤碘€滀竴閿垚鍝佸壀杈戔€濆悗锛岃繖閲屼細灞曠ず鎴愬搧鏁堟灉銆?/div>
       </div>
     </div>`;
     return;
@@ -2906,23 +2962,23 @@ function renderLatestExport() {
     const url = job.outputUrl || "";
     const cardPreviewUrl = previewFrameUrl(url);
     const isDone = job.status === "done" && url;
-    const title = job.title || `成品效果 ${index + 1}`;
+    const title = job.title || `鎴愬搧鏁堟灉 ${index + 1}`;
     const jobId = getFinishedJobId(job);
     const checked = state.selectedFinishedJobIds.has(jobId);
     return `<article class="finished-video-card ${checked ? "selected" : ""}">
       <div class="finished-video-preview" ${isDone ? `data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}"` : ""}>
-        ${jobId ? `<label class="finished-card-select"><input type="checkbox" data-finished-job-check="${escapeHtml(jobId)}" ${checked ? "checked" : ""} aria-label="选择成片"></label>` : ""}
-        ${isDone ? `<video src="${escapeHtml(cardPreviewUrl)}" muted playsinline preload="auto"></video><span class="finished-video-play">点击预览</span>` : `<div class="finished-video-empty">${escapeHtml(job.status === "failed" ? "生成失败" : "生成处理中")}</div>`}
-        <span class="finished-video-badge">${escapeHtml(isDone ? "已完成" : (job.status || "处理中"))}</span>
+        ${jobId ? `<label class="finished-card-select"><input type="checkbox" data-finished-job-check="${escapeHtml(jobId)}" ${checked ? "checked" : ""} aria-label="閫夋嫨鎴愮墖"></label>` : ""}
+        ${isDone ? `<video src="${escapeHtml(cardPreviewUrl)}" muted playsinline preload="auto"></video><span class="finished-video-play">鐐瑰嚮棰勮</span>` : `<div class="finished-video-empty">${escapeHtml(job.status === "failed" ? "鐢熸垚澶辫触" : "鐢熸垚澶勭悊涓?)}</div>`}
+        <span class="finished-video-badge">${escapeHtml(isDone ? "宸插畬鎴? : (job.status || "澶勭悊涓?))}</span>
       </div>
       <div class="finished-video-body">
         <h3>${escapeHtml(title)}</h3>
-        <div class="meta">生成时间：${escapeHtml(job.createdAt || "-")}</div>
-        <div class="meta">剪辑服务：${escapeHtml(job.provider || "自动剪辑")}</div>
-        ${job.error ? `<div class="meta">错误：${escapeHtml(job.error)}</div>` : ""}
+        <div class="meta">鐢熸垚鏃堕棿锛?{escapeHtml(job.createdAt || "-")}</div>
+        <div class="meta">鍓緫鏈嶅姟锛?{escapeHtml(job.provider || "鑷姩鍓緫")}</div>
+        ${job.error ? `<div class="meta">閿欒锛?{escapeHtml(job.error)}</div>` : ""}
         <div class="finished-video-actions">
-          ${isDone ? `<button type="button" data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}">预览</button><a href="${escapeHtml(url)}" download>下载</a>` : `<button type="button" disabled>等待</button><a aria-disabled="true">暂无</a>`}
-          ${jobId ? `<button type="button" class="danger" data-delete-finished-job="${escapeHtml(jobId)}">删除</button>` : `<button type="button" disabled>删除</button>`}
+          ${isDone ? `<button type="button" data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}">棰勮</button><a href="${escapeHtml(url)}" download>涓嬭浇</a>` : `<button type="button" disabled>绛夊緟</button><a aria-disabled="true">鏆傛棤</a>`}
+          ${jobId ? `<button type="button" class="danger" data-delete-finished-job="${escapeHtml(jobId)}">鍒犻櫎</button>` : `<button type="button" disabled>鍒犻櫎</button>`}
         </div>
       </div>
     </article>`;
@@ -2948,7 +3004,7 @@ function hydrateFinishedVideoPreviews(container) {
       if (!preview || preview.querySelector(".finished-video-empty")) return;
       const empty = document.createElement("div");
       empty.className = "finished-video-empty";
-      empty.textContent = "视频加载失败";
+      empty.textContent = "瑙嗛鍔犺浇澶辫触";
       preview.appendChild(empty);
     }, { once: true });
   });
@@ -2966,7 +3022,7 @@ function updateFinishedToolbar(jobs = getFinishedJobs()) {
   }
   if (deleteBtn) {
     deleteBtn.disabled = !selectedCount;
-    deleteBtn.textContent = selectedCount ? `删除选中 ${selectedCount} 条` : "删除选中";
+    deleteBtn.textContent = selectedCount ? `鍒犻櫎閫変腑 ${selectedCount} 鏉 : "鍒犻櫎閫変腑";
   }
 }
 
@@ -2990,10 +3046,10 @@ function toggleAllFinishedJobs(checked) {
 async function deleteFinishedJobs(jobIds) {
   const ids = normalizeList(jobIds).map((id) => String(id || "").trim()).filter(Boolean);
   if (!ids.length) {
-    toast("请先选择要删除的成片");
+    toast("璇峰厛閫夋嫨瑕佸垹闄ょ殑鎴愮墖");
     return;
   }
-  if (!window.confirm(`确认删除 ${ids.length} 条成片吗？删除后成品库里不会再显示。`)) return;
+  if (!window.confirm(`纭鍒犻櫎 ${ids.length} 鏉℃垚鐗囧悧锛熷垹闄ゅ悗鎴愬搧搴撻噷涓嶄細鍐嶆樉绀恒€俙)) return;
   await api("/api/jobs/delete", {
     method: "POST",
     body: JSON.stringify({ jobIds: ids }),
@@ -3001,15 +3057,15 @@ async function deleteFinishedJobs(jobIds) {
   ids.forEach((id) => state.selectedFinishedJobIds.delete(id));
   if (state.lastRender && ids.includes(getFinishedJobId(state.lastRender))) state.lastRender = null;
   await loadJobs();
-  toast(`已删除 ${ids.length} 条成片`);
+  toast(`宸插垹闄?${ids.length} 鏉℃垚鐗嘸);
   scheduleWorkspaceDraftSave();
 }
 
-function openFinishedPreview(url, title = "成片预览") {
+function openFinishedPreview(url, title = "鎴愮墖棰勮") {
   const modal = $("finishedPreviewModal");
   const video = $("finishedPreviewVideo");
   if (!modal || !video || !url) return;
-  $("finishedPreviewTitle").textContent = title || "成片预览";
+  $("finishedPreviewTitle").textContent = title || "鎴愮墖棰勮";
   video.pause();
   video.src = String(url || "").split("#")[0];
   video.load();
@@ -3078,7 +3134,7 @@ function bindActions() {
   $("scriptBtn").addEventListener("click", () => generateScript().catch((e) => toast(e.message)));
   $("splitShotBtn").addEventListener("click", () => {
     if (splitScriptToShots()) {
-      toast("已按文案和分镜导入剪辑镜头");
+      toast("宸叉寜鏂囨鍜屽垎闀滃鍏ュ壀杈戦暅澶?);
       switchTab("editorTab");
     }
   });
@@ -3102,10 +3158,10 @@ function bindActions() {
   $("addShotBtn").addEventListener("click", addShot);
   $("editorAddShotBtn")?.addEventListener("click", addShot);
   $("autoMatchBtn").addEventListener("click", () => {
-    if (splitScriptToShots()) toast("已从脚本分镜重新导入镜头");
+    if (splitScriptToShots()) toast("宸蹭粠鑴氭湰鍒嗛暅閲嶆柊瀵煎叆闀滃ご");
   });
   $("editorImportShotsBtn")?.addEventListener("click", () => {
-    if (splitScriptToShots()) toast("已从脚本分镜重新导入镜头");
+    if (splitScriptToShots()) toast("宸蹭粠鑴氭湰鍒嗛暅閲嶆柊瀵煎叆闀滃ご");
   });
   syncPairedSelects("editorVoiceSelect", "ttsVoiceSelect");
   syncPairedSelects("editorBgmMode", "bgmMode");
@@ -3184,7 +3240,7 @@ function bindActions() {
     }
     switchTab("libraryTab");
     openAssetGroupModal(state.activeAssetGroupId === "all" ? "ungrouped" : state.activeAssetGroupId);
-    toast(`已切到${assetTypeLabels[btn.dataset.uploadType] || "素材"}上传`);
+    toast(`宸插垏鍒?{assetTypeLabels[btn.dataset.uploadType] || "绱犳潗"}涓婁紶`);
   });
   document.addEventListener("change", (event) => {
     if (!(event.target instanceof HTMLElement)) return;
