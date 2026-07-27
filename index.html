@@ -3,196 +3,196 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 瑙嗛宸ュ巶</title>
+  <title>AI 视频工厂</title>
   <link rel="stylesheet" href="styles.css?v=20260724-upload-hook" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
     <div class="login-art">
       <div class="login-card">
-        <div class="brand-mark">AI 瑙嗛宸ュ巶</div>
-        <h1>鏈湴鍟嗗涓撳睘 路 瑙嗛鐢熶骇椹鹃┒鑸?/h1>
-        <p>浠庨棬搴楀畾浣嶃€佽剼鏈€侀暅澶寸礌鏉愬埌鎴愮墖瀵煎嚭锛屼竴姝ユ鎶婄煭瑙嗛鍋氬嚭鏉ャ€?/p>
-        <label>璐﹀彿</label>
+        <div class="brand-mark">AI 视频工厂</div>
+        <h1>本地商家专属 · 视频生产驾驶舱</h1>
+        <p>从门店定位、脚本、镜头素材到成片导出，一步步把短视频做出来。</p>
+        <label>账号</label>
         <input id="loginUsername" value="admin" autocomplete="username" />
-        <label>瀵嗙爜</label>
+        <label>密码</label>
         <input id="loginPassword" value="admin123" type="password" autocomplete="current-password" />
-        <button id="loginBtn" class="primary full">杩涘叆宸ヤ綔鍙?/button>
+        <button id="loginBtn" class="primary full">进入工作台</button>
         <div id="loginError" class="error"></div>
-        <div class="hint">娴嬭瘯璐﹀彿锛歛dmin/admin123锛宒emo01/demo123</div>
+        <div class="hint">测试账号：admin/admin123，demo01/demo123</div>
       </div>
     </div>
   </div>
 
   <div id="appView" class="app hidden">
     <aside class="sidebar" id="sidebar">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="鏀惰捣渚ц竟鏍? aria-expanded="true">鈥?/button>
+      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="收起侧边栏" aria-expanded="true">‹</button>
       <div class="brand-block">
-        <div class="logo">AI 瑙嗛宸ュ巶</div>
-        <div class="sub">鏈湴鍟嗗涓撳睘 路 瑙嗛鐢熶骇椹鹃┒鑸?/div>
+        <div class="logo">AI 视频工厂</div>
+        <div class="sub">本地商家专属 · 视频生产驾驶舱</div>
       </div>
 
       <nav class="side-flow">
-        <div class="nav nav-combo active" data-tabs="researchTab libraryTab" title="璋冪爺涓庤棰戝簱">
+        <div class="nav nav-combo active" data-tabs="researchTab libraryTab" title="调研与视频库">
           <span class="step-dot">1</span>
           <span class="nav-copy">
-            <strong>璋冪爺</strong>
-            <em>妗ｆ涓庣礌鏉愬噯澶?/em>
+            <strong>调研</strong>
+            <em>档案与素材准备</em>
           </span>
-          <i class="step-check">鉁?/i>
-          <span class="nav-segments" role="group" aria-label="璋冪爺闃舵鍏ュ彛">
+          <i class="step-check">✓</i>
+          <span class="nav-segments" role="group" aria-label="调研阶段入口">
             <button class="nav-segment active" data-tab="researchTab" type="button">
-              <b>璋冪爺妗ｆ</b>
+              <b>调研档案</b>
             </button>
             <button class="nav-segment" data-tab="libraryTab" type="button">
-              <b>瑙嗛搴?/b>
+              <b>视频库</b>
             </button>
           </span>
         </div>
-        <button class="nav" data-tab="scriptTab" title="鑴氭湰鐢熸垚">
+        <button class="nav" data-tab="scriptTab" title="脚本生成">
           <span class="step-dot">2</span>
-          <span class="nav-copy"><strong>鑴氭湰</strong><em>鏂囨涓庡垎闀?/em></span>
+          <span class="nav-copy"><strong>脚本</strong><em>文案与分镜</em></span>
         </button>
-        <button class="nav" data-tab="editorTab" title="鍓緫">
+        <button class="nav" data-tab="editorTab" title="剪辑">
           <span class="step-dot">3</span>
-          <span class="nav-copy"><strong>鍓緫</strong><em>闀滃ご鍖归厤娣峰壀</em></span>
+          <span class="nav-copy"><strong>剪辑</strong><em>镜头匹配混剪</em></span>
         </button>
-        <button class="nav" data-tab="exportTab" title="鎴愬搧搴撳瓨">
+        <button class="nav" data-tab="exportTab" title="成品库存">
           <span class="step-dot">4</span>
-          <span class="nav-copy"><strong>鎴愬搧搴撳瓨</strong><em>棰勮涓庝笅杞芥垚鐗?/em></span>
+          <span class="nav-copy"><strong>成品库存</strong><em>预览与下载成片</em></span>
         </button>
       </nav>
 
       <div class="store-card">
-        <div class="store-icon">搴?/div>
+        <div class="store-icon">店</div>
         <div class="store-copy">
-          <strong>缇庡缇庡闂ㄥ簵</strong>
+          <strong>美容美容门店</strong>
           <span id="accountName">-</span>
         </div>
       </div>
-      <div class="today">2026-07-18 鏄熸湡鍏?/div>
-      <button id="logoutBtn" class="ghost small">閫€鍑?/button>
+      <div class="today">2026-07-18 星期六</div>
+      <button id="logoutBtn" class="ghost small">退出</button>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <p class="eyebrow">褰撳墠宸ヤ綔鍙?/p>
-          <h2 id="workspaceTitle">璋冪爺妗ｆ</h2>
-          <p id="workspaceSubtitle" class="workspace-subtitle">鍏堣绯荤粺鐞嗚В浣犳槸璋併€佸簵閾烘儏鍐靛拰褰撳墠鍗＄偣銆?/p>
+          <p class="eyebrow">当前工作台</p>
+          <h2 id="workspaceTitle">调研档案</h2>
+          <p id="workspaceSubtitle" class="workspace-subtitle">先让系统理解你是谁、店铺情况和当前卡点。</p>
         </div>
-        <button id="topExportBtn" class="outline-cta hidden">鎴愬搧搴撳瓨</button>
+        <button id="topExportBtn" class="outline-cta hidden">成品库存</button>
       </header>
 
       <section id="researchTab" class="tab active">
         <section class="dossier-grid">
           <div class="panel dossier-panel">
             <div class="panel-head">
-              <span class="num">璋?/span>
+              <span class="num">调</span>
               <div>
-                <h2>鐢熸剰妗ｆ / 涓汉妗ｆ</h2>
-                <p>杩欎竴鏍忓彧璁╃郴缁熸洿浜嗚В杩欎釜浜哄拰闂ㄥ簵锛屼笉鐢熸垚鑴氭湰銆佷笉鎷嗗垎闀溿€佷笉澶勭悊绱犳潗銆?/p>
+                <h2>生意档案 / 个人档案</h2>
+                <p>这一栏只让系统更了解这个人和门店，不生成脚本、不拆分镜、不处理素材。</p>
               </div>
             </div>
-            <div class="dossier-section-title">闂ㄥ簵鍩烘湰淇℃伅</div>
+            <div class="dossier-section-title">门店基本信息</div>
             <div class="form-row single-first">
               <div>
-                <label>DeepSeek 妯″瀷</label>
+                <label>DeepSeek 模型</label>
                 <select id="modelMode">
-                  <option value="fast">蹇€熺増锛氬揩閫熷缓绔嬬敤鎴风敾鍍?/option>
-                  <option value="thinking">鎬濊€冪増锛氭繁搴﹀垎鏋愪汉璁俱€佸崱鐐瑰拰琛ㄨ揪鏂瑰悜</option>
+                  <option value="fast">快速版：快速建立用户画像</option>
+                  <option value="thinking">思考版：深度分析人设、卡点和表达方向</option>
                 </select>
               </div>
             </div>
             <div class="form-row">
               <div>
-                <label>鎮ㄧ殑琛屼笟鏄粈涔堬紵</label>
-                <input id="storeIndustry" required placeholder="渚嬪锛氶楗€佺編瀹广€佸吇鐢熴€佺編鐢茬編鐫€侀厭鏃? />
+                <label>您的行业是什么？</label>
+                <input id="storeIndustry" required placeholder="例如：餐饮、美容、养生、美甲美睫、酒旅" />
               </div>
               <div>
-                <label>鎮ㄧ殑搴楀悕/鍝佺墝鍚嶆槸锛?/label>
-                <input id="brandName" required placeholder="渚嬪锛氱墰鍙佷浆鍖栧窞棣欐补楦? />
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>闂ㄥ簵鎵€鍦ㄧ殑鍩庡競鏄紵</label>
-                <input id="storeCity" required placeholder="渚嬪锛氬箍宸炪€佷經灞便€佹繁鍦? />
-              </div>
-              <div>
-                <label>鎮ㄩ棬搴楃殑浣嶇疆绠€鍗曟弿杩帮細</label>
-                <input id="storeLocation" required placeholder="渚嬪锛氬ぉ娌冲尯鏌愬晢鍦洪檮杩戙€佺ぞ鍖哄簳鍟嗐€佸啓瀛楁ゼ妤间笅" />
-              </div>
-            </div>
-            <div class="dossier-section-title">浜鸿鍩烘湰淇℃伅</div>
-            <div class="form-row">
-              <div>
-                <label>鐭棰戜腑鎮ㄧ殑鑷垜绉板懠鏄紵</label>
-                <input id="personaName" required placeholder="渚嬪锛氱墰鍙佷浆涓滃摜銆佺毊鑲ょ鐞嗗皬鏁忋€佽€佹澘濞橀樋鑺? />
-              </div>
-              <div>
-                <label>鎮ㄧ殑骞撮緞鏄紵</label>
-                <input id="personaAge" required placeholder="渚嬪锛?5" />
+                <label>您的店名/品牌名是？</label>
+                <input id="brandName" required placeholder="例如：牛叁佬化州香油鸡" />
               </div>
             </div>
             <div class="form-row">
               <div>
-                <label>鎮ㄧ殑鎬у埆鏄紵</label>
+                <label>门店所在的城市是？</label>
+                <input id="storeCity" required placeholder="例如：广州、佛山、深圳" />
+              </div>
+              <div>
+                <label>您门店的位置简单描述：</label>
+                <input id="storeLocation" required placeholder="例如：天河区某商场附近、社区底商、写字楼楼下" />
+              </div>
+            </div>
+            <div class="dossier-section-title">人设基本信息</div>
+            <div class="form-row">
+              <div>
+                <label>短视频中您的自我称呼是？</label>
+                <input id="personaName" required placeholder="例如：牛叁佬东哥、皮肤管理小敏、老板娘阿芳" />
+              </div>
+              <div>
+                <label>您的年龄是？</label>
+                <input id="personaAge" required placeholder="例如：35" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div>
+                <label>您的性别是？</label>
                 <select id="personaGender" required>
-                  <option value="">璇烽€夋嫨</option>
-                  <option>鐢峰＋</option>
-                  <option>濂冲＋</option>
-                  <option>涓嶅己璋冩€у埆</option>
+                  <option value="">请选择</option>
+                  <option>男士</option>
+                  <option>女士</option>
+                  <option>不强调性别</option>
                 </select>
               </div>
               <div>
-                <label>鎮ㄨ繖琛屼笟/闂ㄥ簵鍋氫簡澶氬皯骞达紵</label>
-                <input id="businessYears" required placeholder="渚嬪锛? 骞淬€?0 骞淬€佸垰寮€涓?3 涓湀" />
+                <label>您这行业/门店做了多少年？</label>
+                <input id="businessYears" required placeholder="例如：6 年、10 年、刚开业 3 个月" />
               </div>
             </div>
             <div class="form-row">
               <div>
-                <label>鎮ㄨ嚜宸辨槸鍝噷浜猴紵</label>
-                <input id="hometown" required placeholder="渚嬪锛氬寲宸炴湰鍦颁汉銆佹疆姹曚汉銆佹箹鍗椾汉" />
+                <label>您自己是哪里人？</label>
+                <input id="hometown" required placeholder="例如：化州本地人、潮汕人、湖南人" />
               </div>
               <div>
-                <label>鎮ㄥ笇鏈涗富鎺ㄧ殑浜у搧/濂楅鏄紵<span class="optional">閫夊～</span></label>
-                <textarea id="mainProduct" rows="3" placeholder="渚嬪锛氭嫑鐗屽椁愩€佸洟璐椁愩€佷富鎺ㄦ湇鍔￠」鐩€佸鍗曚环鍖洪棿"></textarea>
+                <label>您希望主推的产品/套餐是？<span class="optional">选填</span></label>
+                <textarea id="mainProduct" rows="3" placeholder="例如：招牌套餐、团购套餐、主推服务项目、客单价区间"></textarea>
               </div>
             </div>
             <div class="form-row">
               <div>
-                <label>鎮ㄧ殑浜у搧/鏈嶅姟浼樺娍锛?span class="optional">閫夊～</span></label>
-                <textarea id="serviceAdvantage" rows="4" placeholder="渚嬪锛氭湰鍦拌€佸簵銆佽€佹澘浜茶嚜鏈嶅姟銆侀鏉愭柊椴溿€佹渚嬬湡瀹炪€佹祦绋嬫爣鍑?></textarea>
+                <label>您的产品/服务优势？<span class="optional">选填</span></label>
+                <textarea id="serviceAdvantage" rows="4" placeholder="例如：本地老店、老板亲自服务、食材新鲜、案例真实、流程标准"></textarea>
               </div>
               <div>
-                <label>鏈夋病鏈夊叾浠栨兂琛ュ厖鐨勶紵<span class="optional">閫夊～</span></label>
-                <textarea id="extraInfo" rows="4" placeholder="渚嬪锛氭兂寮鸿皟鐨勬晠浜嬨€佸缇ゃ€侀棬搴楃鍒┿€佷笉鑳借鐨勫唴瀹广€侀鏍煎亸濂?></textarea>
+                <label>有没有其他想补充的？<span class="optional">选填</span></label>
+                <textarea id="extraInfo" rows="4" placeholder="例如：想强调的故事、客群、门店福利、不能说的内容、风格偏好"></textarea>
               </div>
             </div>
-            <button id="researchBtn" class="primary">鐢熸垚涓汉璋冪爺瀹氫綅</button>
-            <div id="researchLoading" class="loading-line hidden"><span class="spinner"></span><span id="researchLoadingText">姝ｅ湪鐢熸垚璋冪爺瀹氫綅...</span></div>
+            <button id="researchBtn" class="primary">生成个人调研定位</button>
+            <div id="researchLoading" class="loading-line hidden"><span class="spinner"></span><span id="researchLoadingText">正在生成调研定位...</span></div>
           </div>
           <aside class="panel dossier-result-panel">
             <div class="panel-head">
-              <span class="num">妗?/span>
+              <span class="num">档</span>
               <div>
-                <h2>AI 璋冪爺缁撴灉</h2>
-                <p>鐢熸垚鍚庝細娌夋穩涓哄悗缁剼鏈€佽棰戝簱鍜屽壀杈戠殑鍩虹妗ｆ銆?/p>
+                <h2>AI 调研结果</h2>
+                <p>生成后会沉淀为后续脚本、视频库和剪辑的基础档案。</p>
               </div>
             </div>
-            <div id="modelBadge" class="model-badge">绛夊緟璋冪爺</div>
+            <div id="modelBadge" class="model-badge">等待调研</div>
             <div id="researchProgress" class="generation-progress hidden" aria-live="polite">
               <div class="progress-head">
-                <span id="researchProgressStep">姝ｅ湪璇诲彇闂ㄥ簵妗ｆ</span>
+                <span id="researchProgressStep">正在读取门店档案</span>
                 <strong id="researchProgressPercent">0%</strong>
               </div>
               <div class="progress-track"><div id="researchProgressBar" class="progress-bar"></div></div>
               <div id="researchProgressSteps" class="progress-steps"></div>
             </div>
-            <label>涓汉璋冪爺缁撴灉</label>
-            <textarea id="resultStrategy" rows="18" placeholder="鐢熸垚鍚庝細鏄剧ず锛氱敤鎴风敾鍍忋€佽〃杈句紭鍔裤€佷俊浠昏儗涔︺€佸唴瀹圭鍖恒€侀€傚悎鐨勮〃杈炬柟寮?></textarea>
-            <button id="toScriptBtn" class="secondary">瀵煎叆璋冪爺妗ｆ搴?/button>
+            <label>个人调研结果</label>
+            <textarea id="resultStrategy" rows="18" placeholder="生成后会显示：用户画像、表达优势、信任背书、内容禁区、适合的表达方式"></textarea>
+            <button id="toScriptBtn" class="secondary">导入调研档案库</button>
           </aside>
         </section>
       </section>
@@ -203,109 +203,109 @@
             <div class="panel-head">
               <span class="num">2</span>
               <div>
-                <h2>鑴氭湰鐢熸垚</h2>
-                <p>鍏堝鍏ヨ皟鐮旀。妗堬紝鍐嶉€夋嫨瑕佸嚭鐨勭郴鍒楋紝DeepSeek 浼氱粨鍚堟。妗堝拰鍐呭閫昏緫鐢熸垚閫夐銆佹枃妗堝拰鍒嗛暅銆?/p>
+                <h2>脚本生成</h2>
+                <p>先导入调研档案，再选择要出的系列，DeepSeek 会结合档案和内容逻辑生成选题、文案和分镜。</p>
               </div>
             </div>
             <div class="dossier-mini">
-              <button id="importDossierBtn" class="secondary">瀵煎叆璋冪爺妗ｆ搴?/button>
+              <button id="importDossierBtn" class="secondary">导入调研档案库</button>
               <div>
-                <strong id="scriptDossierState">鏈鍏ユ。妗?/strong>
-                <span>瀵煎叆鍚庣郴缁熶細甯︾潃妗ｆ鐢熸垚锛屽鎴蜂笉鐢ㄧ湅鍏ㄦ枃銆?/span>
+                <strong id="scriptDossierState">未导入档案</strong>
+                <span>导入后系统会带着档案生成，客户不用看全文。</span>
               </div>
             </div>
             <textarea id="scriptDossier" class="hidden" readonly></textarea>
             <div class="form-row">
               <div>
-                <label>DeepSeek 鏂囨妯″瀷</label>
+                <label>DeepSeek 文案模型</label>
                 <select id="scriptModelMode">
-                  <option value="fast">蹇€熺増锛氭洿蹇敓鎴愪竴鐗堝彲鐢ㄦ枃妗?/option>
-                  <option value="thinking">鎬濊€冪増锛氭繁搴︽€濊€冧汉缇ゃ€佷汉鎬х偣鍜岀牬鍦堥€夐</option>
+                  <option value="fast">快速版：更快生成一版可用文案</option>
+                  <option value="thinking">思考版：深度思考人群、人性点和破圈选题</option>
                 </select>
               </div>
               <div>
-                <label>閫夋嫨瑕佸嚭鐨勭郴鍒?/label>
+                <label>选择要出的系列</label>
                 <select id="templateSelect"></select>
               </div>
             </div>
-            <label>鐖嗘鏍囬妯℃澘</label>
+            <label>爆款标题模板</label>
             <select id="scriptTitleStyle">
-              <option>鏅鸿兘鎺ㄨ崘鏍峰紡</option>
-              <option>鐥涚偣閽╁瓙鏍囬</option>
-              <option>鍙嶅樊鎮康鏍囬</option>
-              <option>鏁板瓧娓呭崟鏍囬</option>
-              <option>鍚屽煄鍦烘櫙鏍囬</option>
-              <option>閬垮潙鎻愰啋鏍囬</option>
-              <option>缁撴灉鎵胯鏍囬</option>
-              <option>鐪熷疄娴嬭瘎鏍囬</option>
-              <option>鍥㈣喘鎴愪氦鏍囬</option>
+              <option>智能推荐样式</option>
+              <option>痛点钩子标题</option>
+              <option>反差悬念标题</option>
+              <option>数字清单标题</option>
+              <option>同城场景标题</option>
+              <option>避坑提醒标题</option>
+              <option>结果承诺标题</option>
+              <option>真实测评标题</option>
+              <option>团购成交标题</option>
             </select>
             <p id="scriptTitleTemplateHint" class="field-hint title-template-hint"></p>
             <div class="template-tabs" id="templateTabs"></div>
             <div id="templatePreview" class="template-preview"></div>
             <div id="localTargetPanel" class="conditional-panel hidden">
-              <h3>鍚屽煄浜虹兢閫夋嫨 <span class="optional">蹇呴€?/span></h3>
-              <p class="muted compact-hint">鍙閫夛紝骞撮緞鑷姩鍖归厤銆?/p>
+              <h3>同城人群选择 <span class="optional">必选</span></h3>
+              <p class="muted compact-hint">可多选，年龄自动匹配。</p>
               <div class="form-row">
                 <div>
-                  <label>鎶栭煶鍏ぇ浜虹兢缁村害</label>
+                  <label>抖音八大人群维度</label>
                   <input id="localAudienceSegment" type="hidden" />
                   <div id="localAudienceSelect" class="multi-select">
                     <button id="localAudienceToggle" class="multi-select-toggle" type="button" aria-expanded="false">
-                      <span id="localAudienceSummary">璇烽€夋嫨浜虹兢</span>
-                      <i>鈱?/i>
+                      <span id="localAudienceSummary">请选择人群</span>
+                      <i>⌄</i>
                     </button>
                     <div id="localAudienceSegmentGroup" class="multi-choice-grid multi-select-menu hidden">
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="浜虹兢涓嶉檺" />浜虹兢涓嶉檺</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="Z 涓栦唬" />Z 涓栦唬</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="鏂伴攼鐧介" />鏂伴攼鐧介</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="绮捐嚧濡堝" />绮捐嚧濡堝</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="璧勬繁涓骇" />璧勬繁涓骇</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="閮藉競钃濋" />閮藉競钃濋</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="灏忛晣闈掑勾" />灏忛晣闈掑勾</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="灏忛晣涓€佸勾" />灏忛晣涓€佸勾</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="閮藉競閾跺彂" />閮藉競閾跺彂</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="人群不限" />人群不限</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="Z 世代" />Z 世代</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="新锐白领" />新锐白领</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="精致妈妈" />精致妈妈</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="资深中产" />资深中产</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市蓝领" />都市蓝领</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇青年" />小镇青年</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇中老年" />小镇中老年</label>
+                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市银发" />都市银发</label>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label>骞撮緞鑼冨洿</label>
-                  <input id="localAgeRange" readonly placeholder="鑷姩鍖归厤" />
+                  <label>年龄范围</label>
+                  <input id="localAgeRange" readonly placeholder="自动匹配" />
                 </div>
               </div>
             </div>
-            <label>閫夐鏂瑰悜</label>
-            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="鐢熸垚鍚庝細鍏堢粰鍑?3-5 涓€夐鏂瑰悜锛屼互鍙婁负浠€涔堣繖浜涢€夐閫傚悎杩欎釜妗ｆ鍜屾墍閫夌郴鍒椼€?></textarea>
+            <label>选题方向</label>
+            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会先给出 3-5 个选题方向，以及为什么这些选题适合这个档案和所选系列。"></textarea>
             <input id="resultTitle" type="hidden" />
             <input id="resultTags" type="hidden" />
             <div class="button-row">
-              <button id="scriptBtn" class="primary">鐢?DeepSeek 鐢熸垚鏂囨 + 鍒嗛暅</button>
+              <button id="scriptBtn" class="primary">用 DeepSeek 生成文案 + 分镜</button>
             </div>
-            <div id="scriptLoading" class="loading-line hidden"><span class="spinner"></span><span id="scriptLoadingText">姝ｅ湪鐢熸垚鑴氭湰鏂囨...</span></div>
+            <div id="scriptLoading" class="loading-line hidden"><span class="spinner"></span><span id="scriptLoadingText">正在生成脚本文案...</span></div>
           </div>
           <div class="panel script-output-panel">
             <div class="panel-head">
-              <span class="num">闀?/span>
+              <span class="num">镜</span>
               <div>
-                <h2>鏂囨鍜屽垎闀?/h2>
-                <p>鍙充晶鍙斁鐢熸垚鍚庣殑鍙墽琛屽唴瀹癸紝鏂逛究澶嶅埗銆佽皟鏁村拰瀵煎叆鍓緫銆?/p>
+                <h2>文案和分镜</h2>
+                <p>右侧只放生成后的可执行内容，方便复制、调整和导入剪辑。</p>
               </div>
-              <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="閫夌敤閫夐"></div>
+              <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="选用选题"></div>
             </div>
             <div id="scriptProgressPanel" class="generation-progress hidden" aria-live="polite">
               <div class="progress-head">
-                <span id="scriptProgressStep">姝ｅ湪鏁寸悊璋冪爺妗ｆ</span>
+                <span id="scriptProgressStep">正在整理调研档案</span>
                 <strong id="scriptProgressPercent">0%</strong>
               </div>
               <div class="progress-track"><div id="scriptProgressBar" class="progress-bar"></div></div>
               <div id="scriptProgressSteps" class="progress-steps"></div>
             </div>
-            <label>鏂囨鍐呭</label>
-            <textarea id="resultScript" rows="10" placeholder="杩欓噷浼氱敓鎴愬彲鐩存帴鎷嶆憚鐨勭煭瑙嗛鏂囨"></textarea>
-            <label>鍒嗛暅 / 鎷嶆憚娓呭崟</label>
-            <textarea id="resultPrompts" rows="12" placeholder="鐢熸垚鍚庝細鏄剧ず姣忎釜闀滃ご锛氭枃妗堛€佺敾闈€侀渶瑕佷粈涔堢礌鏉?></textarea>
+            <label>文案内容</label>
+            <textarea id="resultScript" rows="10" placeholder="这里会生成可直接拍摄的短视频文案"></textarea>
+            <label>分镜 / 拍摄清单</label>
+            <textarea id="resultPrompts" rows="12" placeholder="生成后会显示每个镜头：文案、画面、需要什么素材"></textarea>
             <div class="button-row">
-              <button id="splitShotBtn" class="secondary">瀵煎叆鍓緫闀滃ご</button>
+              <button id="splitShotBtn" class="secondary">导入剪辑镜头</button>
             </div>
           </div>
         </div>
@@ -315,30 +315,30 @@
         <div class="library-shell">
           <div class="library-top-card">
             <div class="panel-head">
-              <span class="num">搴?/span>
+              <span class="num">库</span>
               <div>
-                <h2>瑙嗛搴?/h2>
-                <p>绱犳潗鎸夎棰戝簱鍒嗙粍绠＄悊锛涘０闊冲厠闅嗗崟鐙鐞嗭紝鍚庣画鍓緫鎸夐暅澶磋皟鐢ㄣ€?/p>
+                <h2>视频库</h2>
+                <p>素材按视频库分组管理；声音克隆单独管理，后续剪辑按镜头调用。</p>
               </div>
-              <button id="createAssetGroupBtn" class="primary panel-head-action" type="button">锛?鏂板瑙嗛搴?/button>
+              <button id="createAssetGroupBtn" class="primary panel-head-action" type="button">＋ 新增视频库</button>
             </div>
             <div class="quota-strip">
               <div>
-                <strong>绱犳潗搴撳閲?/strong>
+                <strong>素材库容量</strong>
                 <span id="assetQuotaText">0GB / 5GB</span>
               </div>
               <div class="quota-bar"><i id="assetQuotaBar"></i></div>
-              <em id="assetQuotaHint">鍐呴儴浣撻獙鐗堝厛闄愬埗 5GB锛屽悗缁澶栫増鍙寜璐﹀彿鎵╁銆?/em>
+              <em id="assetQuotaHint">内部体验版先限制 5GB，后续对外版可按账号扩容。</em>
             </div>
           </div>
 
           <div class="library-two-columns">
             <div class="panel asset-library-panel">
               <div class="section-title compact-title">
-                <span class="mini-icon">绱?/span>
+                <span class="mini-icon">素</span>
                 <div>
-                  <h2>绱犳潗搴?/h2>
-                  <p>瀹㈡埛鑷繁鍒涘缓瑙嗛搴擄紱鐐瑰嚮浠绘剰瑙嗛搴撳嵆鍙笂浼犮€侀€夋嫨鍜屽垹闄ょ礌鏉愩€?/p>
+                  <h2>素材库</h2>
+                  <p>客户自己创建视频库；点击任意视频库即可上传、选择和删除素材。</p>
                 </div>
               </div>
               <div id="assetGroupGrid" class="asset-group-grid"></div>
@@ -346,24 +346,26 @@
 
             <aside class="panel voice-clone-panel">
               <div class="section-title compact-title">
-                <span class="mini-icon">澹?/span>
+                <span class="mini-icon">声</span>
                 <div>
-                  <h2>澹伴煶鍏嬮殕</h2>
-                  <p>涓婁紶鏈汉鎴栧凡鎺堟潈澹伴煶鏍锋湰锛岀敓鎴愬悗鍓緫鍜屾垚鍝侀厤闊冲彲鐩存帴閫夋嫨銆?/p>
+                  <h2>声音克隆</h2>
+                  <p>上传本人或已授权声音样本，生成后剪辑和成品配音可直接选择。</p>
                 </div>
               </div>
               <div class="voice-form">
-                <label>澹伴煶鍚嶇О</label>
-                <input id="voiceName" placeholder="渚嬪锛氳€佹澘鑷劧鍙ｆ挱" />
-                <label>閫夋嫨澹伴煶鏍锋湰</label>
+                <label>声音名称</label>
+                <input id="voiceName" placeholder="例如：老板自然口播" />
+                <label>选择声音样本</label>
                 <select id="voiceSampleSelect"></select>
                 <label class="checkline">
                   <input id="voiceConsent" type="checkbox" />
-                  鎴戠‘璁よ澹伴煶涓烘湰浜烘垨宸插彇寰楁槑纭巿鏉?                </label>
-                <button id="createVoiceBtn" class="secondary">鍏嬮殕澹伴煶妗ｆ</button>
+                  我确认该声音为本人或已取得明确授权
+                </label>
+                <button id="createVoiceBtn" class="secondary">克隆声音档案</button>
               </div>
               <div class="voice-tip">
-                宸叉帴鍏ラ樋閲屼簯鐧剧偧澹伴煶澶嶅埢銆傚缓璁笂浼?10 绉?5 鍒嗛挓娓呮櫚浜哄０锛涚郴缁熶細閫氳繃 OSS 涓存椂閾炬帴缁欑櫨鐐艰鍙栨牱鏈€?              </div>
+                已接入阿里云百炼声音复刻。建议上传 10 秒-5 分钟清晰人声；系统会通过 OSS 临时链接给百炼读取样本。
+              </div>
               <div id="voiceList" class="voice-list"></div>
             </aside>
           </div>
@@ -373,42 +375,42 @@
             <div class="library-modal-card">
               <div class="library-modal-head">
                 <div>
-                  <span class="eyebrow">褰撳墠瑙嗛搴?/span>
-                  <h3 id="assetModalTitle">鏈垎缁?/h3>
-                  <p id="assetModalMeta">0 涓礌鏉?路 0 B</p>
+                  <span class="eyebrow">当前视频库</span>
+                  <h3 id="assetModalTitle">未分组</h3>
+                  <p id="assetModalMeta">0 个素材 · 0 B</p>
                 </div>
-                <button class="icon-btn" type="button" data-close-asset-modal>脳</button>
+                <button class="icon-btn" type="button" data-close-asset-modal>×</button>
               </div>
               <div class="upload-panel in-modal">
                 <div class="upload-panel-head">
-                  <strong>娣诲姞绱犳潗</strong>
-                  <span id="assetUploadHint">绱犳潗浼氱洿鎺ヨ繘鍏ュ綋鍓嶈棰戝簱銆?/span>
+                  <strong>添加素材</strong>
+                  <span id="assetUploadHint">素材会直接进入当前视频库。</span>
                 </div>
                 <div class="form-row">
                   <div>
-                    <label>涓婁紶鍒板摢涓棰戝簱</label>
+                    <label>上传到哪个视频库</label>
                     <select id="assetLibrarySelect"></select>
                   </div>
                   <div>
-                    <label>绱犳潗鐢ㄩ€?/label>
+                    <label>素材用途</label>
                     <select id="assetType">
-                      <option value="talking_head">鍙ｆ挱瑙嗛</option>
-                      <option value="scene">闂ㄥ簵鐜</option>
-                      <option value="process">椤圭洰杩囩▼</option>
-                      <option value="feedback">椤惧鍙嶉</option>
-                      <option value="product">浜у搧/鍥㈣喘鍥?/option>
-                      <option value="voice_sample">澹伴煶鏍锋湰</option>
-                      <option value="bgm">BGM 闊充箰</option>
+                      <option value="talking_head">口播视频</option>
+                      <option value="scene">门店环境</option>
+                      <option value="process">项目过程</option>
+                      <option value="feedback">顾客反馈</option>
+                      <option value="product">产品/团购图</option>
+                      <option value="voice_sample">声音样本</option>
+                      <option value="bgm">BGM 音乐</option>
                     </select>
                   </div>
                 </div>
-                <label>绱犳潗鏂囦欢</label>
+                <label>素材文件</label>
                 <input id="assetFile" type="file" />
-                <button id="uploadAssetBtn" class="primary">涓婁紶鍒板綋鍓嶈棰戝簱</button>
+                <button id="uploadAssetBtn" class="primary">上传到当前视频库</button>
               </div>
               <div class="library-modal-subhead">
-                <strong>绱犳潗绠＄悊</strong>
-                <span>鍦ㄨ繖閲岄€夋嫨鎴栧垹闄ょ礌鏉愶紝椤甸潰搴曢儴涓嶅啀鍗曠嫭閾哄垪琛ㄣ€?/span>
+                <strong>素材管理</strong>
+                <span>在这里选择或删除素材，页面底部不再单独铺列表。</span>
               </div>
               <div id="assetList" class="library-modal-list"></div>
             </div>
@@ -420,19 +422,19 @@
         <div class="workspace-grid one-column">
           <div class="panel wide-panel">
             <div class="panel-head">
-              <span class="num">鍓?/span>
+              <span class="num">剪</span>
               <div>
-                <h2>鍓緫</h2>
-                <p>鎶婅剼鏈噷鐨勬枃妗堝拰鍒嗛暅瀵煎叆锛屽啀缁欐瘡涓暅澶村尮閰嶅鎴疯嚜寤虹殑瑙嗛搴撶礌鏉愩€?/p>
+                <h2>剪辑</h2>
+                <p>把脚本里的文案和分镜导入，再给每个镜头匹配客户自建的视频库素材。</p>
               </div>
-              <button id="oneClickEditBtn" class="primary panel-head-action" type="button">涓€閿垚鍝佸壀杈?/button>
+              <button id="oneClickEditBtn" class="primary panel-head-action" type="button">一键成品剪辑</button>
             </div>
             <div id="editorMaterialNotice" class="editor-notice hidden">
               <div>
-                <strong>鍓緫鍓嶅厛琛ラ綈瑙嗛搴?/strong>
-                <p id="editorMaterialNoticeText">褰撳墠缂哄皯绱犳潗鎴栧０闊筹紝璇峰厛鍘昏棰戝簱娣诲姞銆?/p>
+                <strong>剪辑前先补齐视频库</strong>
+                <p id="editorMaterialNoticeText">当前缺少素材或声音，请先去视频库添加。</p>
               </div>
-              <button id="editorGoLibraryBtn" class="secondary" type="button">鍘昏棰戝簱娣诲姞绱犳潗 / 澹伴煶</button>
+              <button id="editorGoLibraryBtn" class="secondary" type="button">去视频库添加素材 / 声音</button>
             </div>
             <div id="editProgressOverlay" class="edit-progress-overlay hidden" aria-live="polite">
               <div class="edit-loader">
@@ -441,50 +443,50 @@
                 <span></span>
               </div>
               <div>
-                <h3>姝ｅ湪涓€閿垚鍝佸壀杈?/h3>
-                <p id="editProgressText">姝ｅ湪鐢熸垚鍏嬮殕閰嶉煶銆佸尮閰嶇礌鏉愬拰鍚堟垚鎴愮墖锛岃淇濇寔椤甸潰鎵撳紑銆?/p>
+                <h3>正在一键成品剪辑</h3>
+                <p id="editProgressText">正在生成克隆配音、匹配素材和合成成片，请保持页面打开。</p>
                 <div class="edit-progress-track"><i id="editProgressBar"></i></div>
                 <div id="editProgressSteps" class="edit-progress-steps">
-                  <em>鐢熸垚閰嶉煶</em>
-                  <em>鍖归厤绱犳潗</em>
-                  <em>鍚堟垚鎴愮墖</em>
-                  <em>鍐欏叆鎴愬搧搴?/em>
+                  <em>生成配音</em>
+                  <em>匹配素材</em>
+                  <em>合成成片</em>
+                  <em>写入成品库</em>
                 </div>
               </div>
             </div>
             <div class="button-row top-actions">
-              <button id="addShotBtn" class="secondary">鎵嬪姩娣诲姞闀滃ご</button>
-              <button id="autoMatchBtn" class="secondary">浠庤剼鏈垎闀滃鍏?/button>
+              <button id="addShotBtn" class="secondary">手动添加镜头</button>
+              <button id="autoMatchBtn" class="secondary">从脚本分镜导入</button>
             </div>
             <div class="editor-quick-settings">
               <div class="smart-title-card">
-                <span class="smart-title-icon">鏍?/span>
+                <span class="smart-title-icon">标</span>
                 <div>
-                  <p class="eyebrow">AI 鏍囬鍒ゆ柇</p>
-                  <h3 id="editorRecommendedTitleStyle">绛夊緟瀵煎叆闀滃ご</h3>
-                  <p id="editorTitleTemplateHint" class="field-hint title-template-hint">瀵煎叆鑴氭湰鍚庯紝绯荤粺浼氭牴鎹枃妗堝拰鍒嗛暅鑷姩鍒ゆ柇鏈€閫傚悎鐨勬爣棰樼被鍨嬨€?/p>
+                  <p class="eyebrow">AI 标题判断</p>
+                  <h3 id="editorRecommendedTitleStyle">等待导入镜头</h3>
+                  <p id="editorTitleTemplateHint" class="field-hint title-template-hint">导入脚本后，系统会根据文案和分镜自动判断最适合的标题类型。</p>
                 </div>
               </div>
               <div class="editor-audio-bar">
                 <div>
-                  <label>鍏嬮殕澹伴煶椤圭洰</label>
+                  <label>克隆声音项目</label>
                   <select id="editorVoiceSelect"></select>
                 </div>
                 <div>
-                  <label>BGM 璁剧疆</label>
+                  <label>BGM 设置</label>
                   <select id="editorBgmMode">
-                    <option>鏅鸿兘鎺ㄨ崘 BGM</option>
-                    <option>涓嶇敤 BGM</option>
-                    <option>甯哥敤BGM-杞诲揩绉嶈崏</option>
-                    <option>甯哥敤BGM-娓╂煍鍙ｆ挱</option>
-                    <option>甯哥敤BGM-楂樼骇姘涘洿</option>
-                    <option>甯哥敤BGM-鍚屽煄鐢熸椿</option>
-                    <option>甯哥敤BGM-鍥㈣喘淇冨崟</option>
-                    <option>甯哥敤BGM-鑸掔紦淇′换</option>
+                    <option>智能推荐 BGM</option>
+                    <option>不用 BGM</option>
+                    <option>常用BGM-轻快种草</option>
+                    <option>常用BGM-温柔口播</option>
+                    <option>常用BGM-高级氛围</option>
+                    <option>常用BGM-同城生活</option>
+                    <option>常用BGM-团购促单</option>
+                    <option>常用BGM-舒缓信任</option>
                   </select>
                 </div>
                 <div class="voice-speed-control">
-                  <label for="editorVoiceSpeed">澹伴煶璇€?<span id="editorVoiceSpeedValue">1.0x</span></label>
+                  <label for="editorVoiceSpeed">声音语速 <span id="editorVoiceSpeedValue">1.0x</span></label>
                   <div class="voice-speed-row">
                     <input id="editorVoiceSpeed" type="range" min="0.8" max="1.5" step="0.1" value="1.0" list="voiceSpeedMarks" />
                   </div>
@@ -501,10 +503,10 @@
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>闀滃ご</th>
-                    <th>鍙ｆ挱鏂囨</th>
-                    <th>鍒嗛暅鐢婚潰</th>
-                    <th>瑙嗛搴撳尮閰?/th>
+                    <th>镜头</th>
+                    <th>口播文案</th>
+                    <th>分镜画面</th>
+                    <th>视频库匹配</th>
                   </tr>
                 </thead>
                 <tbody id="shotTableBody"></tbody>
@@ -520,73 +522,74 @@
             <div class="panel-head">
               <span class="num">4</span>
               <div>
-                <h2>鎴愬搧绱犳潗搴?/h2>
-                <p>杩欓噷鍍忕礌鏉愯棰戝簱涓€鏍蜂繚瀛樻垚鐗囨晥鏋滐紝瀹㈡埛鍙渶瑕侀瑙堛€佷笅杞藉拰澶嶇敤銆?/p>
+                <h2>成品素材库</h2>
+                <p>这里像素材视频库一样保存成片效果，客户只需要预览、下载和复用。</p>
               </div>
-              <button id="videoBtn" class="primary panel-head-action">鐢熸垚婕旂ず鎴愮墖</button>
+              <button id="videoBtn" class="primary panel-head-action">生成演示成片</button>
             </div>
-            <div id="exportStatus" class="export-status">杩樻病鏈夌敓鎴愭垚鐗?/div>
+            <div id="exportStatus" class="export-status">还没有生成成片</div>
             <div class="finished-library-toolbar">
               <label class="finished-select-all">
                 <input id="selectAllFinishedJobs" type="checkbox">
-                鍏ㄩ€夋垚鐗?              </label>
-              <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>鍒犻櫎閫変腑</button>
+                全选成片
+              </label>
+              <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>删除选中</button>
             </div>
             <div id="latestExport" class="finished-video-grid"></div>
             <details class="export-advanced">
-              <summary>楂樼骇鐢熸垚璁剧疆</summary>
+              <summary>高级生成设置</summary>
               <div class="export-advanced-grid">
                 <div>
-                  <label>閫夋嫨澹伴煶</label>
+                  <label>选择声音</label>
                   <select id="ttsVoiceSelect"></select>
                 </div>
                 <div>
-                  <label>鐢熸垚鏉℃暟</label>
+                  <label>生成条数</label>
                   <select id="renderCount">
-                    <option value="1">1 鏉?/option>
-                    <option value="2">2 鏉?/option>
-                    <option value="3">3 鏉?/option>
-                    <option value="5">5 鏉?/option>
+                    <option value="1">1 条</option>
+                    <option value="2">2 条</option>
+                    <option value="3">3 条</option>
+                    <option value="5">5 条</option>
                   </select>
                 </div>
                 <div>
-                  <label>BGM 璁剧疆</label>
+                  <label>BGM 设置</label>
                   <select id="bgmMode">
-                    <option>鏅鸿兘鎺ㄨ崘 BGM</option>
-                    <option>涓嶇敤 BGM</option>
-                    <option>甯哥敤BGM-杞诲揩绉嶈崏</option>
-                    <option>甯哥敤BGM-娓╂煍鍙ｆ挱</option>
-                    <option>甯哥敤BGM-楂樼骇姘涘洿</option>
-                    <option>甯哥敤BGM-鍚屽煄鐢熸椿</option>
-                    <option>甯哥敤BGM-鍥㈣喘淇冨崟</option>
-                    <option>甯哥敤BGM-鑸掔紦淇′换</option>
+                    <option>智能推荐 BGM</option>
+                    <option>不用 BGM</option>
+                    <option>常用BGM-轻快种草</option>
+                    <option>常用BGM-温柔口播</option>
+                    <option>常用BGM-高级氛围</option>
+                    <option>常用BGM-同城生活</option>
+                    <option>常用BGM-团购促单</option>
+                    <option>常用BGM-舒缓信任</option>
                   </select>
                 </div>
                 <div class="voice-speed-control">
-                  <label for="voiceSpeed">澹伴煶璇€?<span id="voiceSpeedValue">1.0x</span></label>
+                  <label for="voiceSpeed">声音语速 <span id="voiceSpeedValue">1.0x</span></label>
                   <div class="voice-speed-row">
                     <input id="voiceSpeed" type="range" min="0.8" max="1.5" step="0.1" value="1.0" list="voiceSpeedMarks" />
                   </div>
                 </div>
                 <div>
-                  <label>鏍囬鏍峰紡</label>
+                  <label>标题样式</label>
                   <select id="titleStyle">
-                    <option>鏅鸿兘鎺ㄨ崘鏍峰紡</option>
-                    <option>涓嶈鏍囬</option>
-                    <option>鐥涚偣閽╁瓙鏍囬</option>
-                    <option>鍙嶅樊鎮康鏍囬</option>
-                    <option>鏁板瓧娓呭崟鏍囬</option>
-                    <option>鍚屽煄鍦烘櫙鏍囬</option>
-                    <option>閬垮潙鎻愰啋鏍囬</option>
-                    <option>缁撴灉鎵胯鏍囬</option>
-                    <option>鐪熷疄娴嬭瘎鏍囬</option>
-                    <option>鍥㈣喘鎴愪氦鏍囬</option>
+                    <option>智能推荐样式</option>
+                    <option>不要标题</option>
+                    <option>痛点钩子标题</option>
+                    <option>反差悬念标题</option>
+                    <option>数字清单标题</option>
+                    <option>同城场景标题</option>
+                    <option>避坑提醒标题</option>
+                    <option>结果承诺标题</option>
+                    <option>真实测评标题</option>
+                    <option>团购成交标题</option>
                   </select>
                   <p id="titleTemplateHint" class="field-hint title-template-hint"></p>
                 </div>
                 <div class="hidden">
                   <select id="subtitleStyle">
-                    <option>鐜孩楂樹寒瀛楀箷</option>
+                    <option>玫红高亮字幕</option>
                   </select>
                 </div>
                 <datalist id="voiceSpeedMarks">
@@ -597,13 +600,13 @@
                   <option value="1.5"></option>
                 </datalist>
               </div>
-              <label>閰嶉煶鏂囨湰</label>
-              <textarea id="ttsText" rows="5" placeholder="鑴氭湰鐢熸垚鍚庝細鑷姩濉叆"></textarea>
-              <button id="ttsBtn" class="secondary">鐢熸垚閰嶉煶</button>
-              <label>瑙嗛鏍囬</label>
-              <input id="videoTitle" placeholder="鑴氭湰鏍囬浼氳嚜鍔ㄥ～鍏? />
-              <label>瑙嗛鑴氭湰</label>
-              <textarea id="videoScript" rows="5" placeholder="鐢ㄤ簬鎴愮墖鍚堟垚"></textarea>
+              <label>配音文本</label>
+              <textarea id="ttsText" rows="5" placeholder="脚本生成后会自动填入"></textarea>
+              <button id="ttsBtn" class="secondary">生成配音</button>
+              <label>视频标题</label>
+              <input id="videoTitle" placeholder="脚本标题会自动填入" />
+              <label>视频脚本</label>
+              <textarea id="videoScript" rows="5" placeholder="用于成片合成"></textarea>
             </details>
           </div>
         </div>
@@ -614,8 +617,8 @@
   <div id="finishedPreviewModal" class="finished-preview-modal hidden">
     <div class="finished-preview-backdrop" data-close-finished-preview></div>
     <div class="finished-preview-dialog">
-      <button class="modal-close" type="button" data-close-finished-preview>脳</button>
-      <h3 id="finishedPreviewTitle">鎴愮墖棰勮</h3>
+      <button class="modal-close" type="button" data-close-finished-preview>×</button>
+      <h3 id="finishedPreviewTitle">成片预览</h3>
       <video id="finishedPreviewVideo" controls playsinline></video>
     </div>
   </div>
