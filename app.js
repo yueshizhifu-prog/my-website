@@ -5,6 +5,7 @@ const state = {
   assets: [],
   voices: [],
   jobs: [],
+  accounts: [],
   selectedFinishedJobIds: new Set(),
   assetGroups: [],
   activeAssetGroupId: localStorage.getItem("aivf_active_asset_group") || "all",
@@ -24,21 +25,14 @@ const apiSearchParam = new URLSearchParams(location.search).get("api");
 if (apiSearchParam) {
   localStorage.setItem("aivf_api_base_url", apiSearchParam.trim().replace(/\/+$/, ""));
 }
-const configuredApiBaseUrl = String(window.AIVF_API_BASE_URL || localStorage.getItem("aivf_api_base_url") || "").trim().replace(/\/+$/, "");
+const configuredApiBaseUrl = String(apiSearchParam || window.AIVF_API_BASE_URL || localStorage.getItem("aivf_api_base_url") || "").trim().replace(/\/+$/, "");
 const staticPreviewMode = location.hostname.endsWith(".github.io") && !configuredApiBaseUrl;
 const staticPreviewMessage = "当前是 GitHub Pages 静态预览版，只能进入页面预览；登录、上传、AI 生成、配音和剪视频需要连接后端服务。";
-const loginPresets = {
-  client: {
-    username: "client01",
-    password: "client123",
-    note: "客户入口只保留日常使用流程，适合发给商家试用。",
-  },
-  admin: {
-    username: "admin",
-    password: "admin123",
-    note: "管理员入口用于内部配置、测试和排查问题。",
-  },
-};
+const staticAccountStorageKey = "aivf_static_accounts";
+const staticDefaultAccounts = [
+  { id: "admin", username: "admin", phone: "", password: "admin123", role: "admin", quotaDaily: 100, clipQuota: 100, clipsUsed: 0, expiresAt: "", disabled: false, createdAt: "2026-07-27T00:00:00.000Z" },
+  { id: "client01", username: "client01", phone: "", password: "client123", role: "customer", quotaDaily: 20, clipQuota: 20, clipsUsed: 0, expiresAt: "", disabled: false, createdAt: "2026-07-27T00:00:00.000Z" },
+];
 
 const researchRegenerateLimit = 3;
 const researchRegenerateWindowMs = 5 * 60 * 1000;
@@ -144,6 +138,10 @@ const workspaceCopy = {
   exportTab: {
     title: "成品素材库",
     subtitle: "像素材视频库一样保存成片效果，方便预览、下载和复用。"
+  },
+  accountTab: {
+    title: "账号设置",
+    subtitle: "管理客户登录、有效期和剪辑条数，系统会按账号身份自动分配权限。"
   }
 };
 
@@ -276,11 +274,45 @@ function parseRequestBody(body) {
 
 function getStaticPreviewUser(username = "admin") {
   const clean = String(username || "admin").trim() || "admin";
-  return {
+  const account = getStaticAccounts().find((item) => item.username === clean || item.phone === clean);
+  return publicAccount(account || {
     id: `static-${clean}`,
     username: clean,
     role: clean === "admin" ? "admin" : (clean.startsWith("client") ? "customer" : "demo"),
+  });
+}
+
+function getStaticAccounts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(staticAccountStorageKey) || "null");
+    if (Array.isArray(saved) && saved.length) return saved;
+  } catch {}
+  return staticDefaultAccounts.map((item) => ({ ...item }));
+}
+
+function saveStaticAccounts(accounts) {
+  localStorage.setItem(staticAccountStorageKey, JSON.stringify(accounts));
+}
+
+function publicAccount(account = {}) {
+  return {
+    id: account.id || account.username || crypto.randomUUID(),
+    username: account.username || "",
+    phone: account.phone || "",
+    role: account.role || "customer",
+    quotaDaily: Number(account.quotaDaily || 0),
+    clipQuota: Number(account.clipQuota || account.quotaDaily || 0),
+    clipsUsed: Number(account.clipsUsed || 0),
+    expiresAt: account.expiresAt || "",
+    disabled: Boolean(account.disabled),
+    createdAt: account.createdAt || "",
+    updatedAt: account.updatedAt || "",
   };
+}
+
+function isAccountExpired(account = {}) {
+  if (!account.expiresAt) return false;
+  return new Date(`${account.expiresAt}T23:59:59`).getTime() < Date.now();
 }
 
 function buildStaticPreviewCopy(payload = {}) {
@@ -336,15 +368,49 @@ function staticPreviewApi(path, options = {}) {
   if (path === "/api/auth/login" && method === "POST") {
     const username = String(payload.username || "").trim();
     const password = String(payload.password || "");
-    const valid =
-      (username === "admin" && password === "admin123") ||
-      (username === "demo01" && password === "demo123") ||
-      (username === "client01" && password === "client123");
-    if (!valid) throw new Error("账号或密码错误");
-    return Promise.resolve({ ok: true, token: `static-preview-${username}`, user: getStaticPreviewUser(username) });
+    const account = getStaticAccounts().find((item) => (item.username === username || item.phone === username) && item.password === password);
+    if (!account) throw new Error("账号或密码错误");
+    if (account.disabled) throw new Error("账号已暂停");
+    if (isAccountExpired(account)) throw new Error("账号已过有效期");
+    return Promise.resolve({ ok: true, token: `static-preview-${account.username}`, user: publicAccount(account) });
   }
   if (path === "/api/me") {
     return Promise.resolve({ ok: true, user: getStaticPreviewUser(state.token.replace(/^static-preview-/, "") || "admin") });
+  }
+  if (path === "/api/accounts" && method === "GET") {
+    if (state.user?.role !== "admin") throw new Error("只有管理员可以查看账号列表");
+    return Promise.resolve({ ok: true, accounts: getStaticAccounts().map(publicAccount) });
+  }
+  if (path === "/api/accounts" && method === "POST") {
+    if (state.user?.role !== "admin") throw new Error("只有管理员可以保存账号");
+    const accounts = getStaticAccounts();
+    const id = String(payload.id || "").trim();
+    const username = String(payload.username || "").trim();
+    if (!username) throw new Error("请填写账号名");
+    const existingIndex = accounts.findIndex((item) => item.id === id || item.username === username);
+    const existing = existingIndex >= 0 ? accounts[existingIndex] : null;
+    if (!existing && !String(payload.password || "").trim()) throw new Error("新账号请填写密码");
+    const duplicated = accounts.some((item, index) => index !== existingIndex && (item.username === username || (payload.phone && item.phone === payload.phone)));
+    if (duplicated) throw new Error("账号名或手机号已存在");
+    const next = {
+      ...(existing || {}),
+      id: existing?.id || `account-${Date.now()}`,
+      username,
+      phone: String(payload.phone || "").trim(),
+      password: String(payload.password || existing?.password || ""),
+      role: payload.role === "admin" ? "admin" : "customer",
+      quotaDaily: Number(payload.quotaDaily || 0),
+      clipQuota: Number(payload.clipQuota || 0),
+      clipsUsed: Number(existing?.clipsUsed || 0),
+      expiresAt: String(payload.expiresAt || "").trim(),
+      disabled: Boolean(payload.disabled),
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    if (existingIndex >= 0) accounts[existingIndex] = next;
+    else accounts.push(next);
+    saveStaticAccounts(accounts);
+    return Promise.resolve({ ok: true, account: publicAccount(next), accounts: accounts.map(publicAccount) });
   }
   if (path === "/api/health") {
     return Promise.resolve({ ok: true, name: "GitHub Pages 静态预览版" });
@@ -493,6 +559,124 @@ function clearCurrentWorkspaceDraft() {
   localStorage.removeItem(getWorkspaceDraftKey());
 }
 
+function getAccountFormPayload() {
+  return {
+    id: $("accountEditingId")?.value.trim() || "",
+    username: $("accountUsername")?.value.trim() || "",
+    phone: $("accountPhone")?.value.trim() || "",
+    password: $("accountPassword")?.value || "",
+    expiresAt: $("accountExpiresAt")?.value || "",
+    clipQuota: Number($("accountClipQuota")?.value || 0),
+    quotaDaily: Number($("accountQuotaDaily")?.value || 0),
+    role: $("accountRole")?.value || "customer",
+    disabled: Boolean($("accountDisabled")?.checked),
+  };
+}
+
+function resetAccountForm(account = null) {
+  if ($("accountEditingId")) $("accountEditingId").value = account?.id || "";
+  if ($("accountUsername")) $("accountUsername").value = account?.username || "";
+  if ($("accountPhone")) $("accountPhone").value = account?.phone || "";
+  if ($("accountPassword")) $("accountPassword").value = "";
+  if ($("accountExpiresAt")) $("accountExpiresAt").value = account?.expiresAt ? String(account.expiresAt).slice(0, 10) : "";
+  if ($("accountClipQuota")) $("accountClipQuota").value = Number(account?.clipQuota || account?.quotaDaily || 20);
+  if ($("accountQuotaDaily")) $("accountQuotaDaily").value = Number(account?.quotaDaily || 20);
+  if ($("accountRole")) $("accountRole").value = account?.role === "admin" ? "admin" : "customer";
+  if ($("accountDisabled")) $("accountDisabled").checked = Boolean(account?.disabled);
+  if ($("accountError")) $("accountError").textContent = "";
+}
+
+function accountStatusText(account) {
+  if (account.disabled) return "已暂停";
+  if (isAccountExpired(account)) return "已过期";
+  return "正常";
+}
+
+function renderAccountSettings() {
+  const user = state.user;
+  if (!user || !$("accountSelfCard")) return;
+  const remaining = Math.max(0, Number(user.clipQuota || 0) - Number(user.clipsUsed || 0));
+  $("accountSelfCard").innerHTML = [
+    `<div class="account-stat"><span>当前账号</span><strong>${escapeHtml(user.username || "-")}</strong></div>`,
+    `<div class="account-stat"><span>手机号</span><strong>${escapeHtml(user.phone || "未设置")}</strong></div>`,
+    `<div class="account-stat"><span>登录身份</span><strong>${escapeHtml(roleLabel(user.role))}</strong></div>`,
+    `<div class="account-stat"><span>剩余剪辑条数</span><strong>${remaining} / ${Number(user.clipQuota || 0)}</strong></div>`,
+    `<div class="account-stat"><span>登录有效期</span><strong>${escapeHtml(formatAccountDate(user.expiresAt))}</strong></div>`,
+    `<div class="account-stat"><span>每日生成额度</span><strong>${Number(user.quotaDaily || 0)}</strong></div>`,
+  ].join("");
+  if ($("accountAdminArea")) $("accountAdminArea").classList.toggle("hidden", user.role !== "admin");
+  if (user.role === "admin") renderAccountList();
+}
+
+function renderAccountList() {
+  const list = $("accountList");
+  if (!list) return;
+  if (state.user?.role !== "admin") {
+    list.innerHTML = "";
+    return;
+  }
+  if (!state.accounts.length) {
+    list.innerHTML = `<div class="hint">还没有加载账号，点击刷新。</div>`;
+    return;
+  }
+  list.innerHTML = state.accounts.map((account) => `
+    <div class="account-row">
+      <strong>${escapeHtml(account.username || "-")}<br><span>${escapeHtml(roleLabel(account.role))}</span></strong>
+      <span>${escapeHtml(account.phone || "未设置手机号")}</span>
+      <em>有效期：${escapeHtml(formatAccountDate(account.expiresAt))}</em>
+      <em>剪辑：${Number(account.clipsUsed || 0)} / ${Number(account.clipQuota || 0)}</em>
+      <div class="account-row-actions">
+        <button class="ghost small" type="button" data-edit-account-id="${escapeHtml(account.id)}">编辑</button>
+        <button class="ghost small" type="button" data-toggle-account-id="${escapeHtml(account.id)}">${account.disabled ? "启用" : "暂停"}</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function loadAccounts() {
+  if (state.user?.role !== "admin") {
+    renderAccountSettings();
+    return;
+  }
+  const data = await api("/api/accounts");
+  state.accounts = Array.isArray(data.accounts) ? data.accounts : [];
+  renderAccountSettings();
+}
+
+async function saveAccount() {
+  if ($("accountError")) $("accountError").textContent = "";
+  try {
+    const data = await api("/api/accounts", {
+      method: "POST",
+      body: JSON.stringify(getAccountFormPayload()),
+    });
+    state.accounts = Array.isArray(data.accounts) ? data.accounts : state.accounts;
+    resetAccountForm();
+    renderAccountSettings();
+    toast("账号已保存");
+  } catch (error) {
+    if ($("accountError")) $("accountError").textContent = error.message;
+  }
+}
+
+function editAccount(accountId) {
+  const account = state.accounts.find((item) => item.id === accountId);
+  if (!account) return;
+  resetAccountForm(account);
+}
+
+async function toggleAccount(accountId) {
+  const account = state.accounts.find((item) => item.id === accountId);
+  if (!account) return;
+  const data = await api("/api/accounts", {
+    method: "POST",
+    body: JSON.stringify({ ...account, disabled: !account.disabled, password: "" }),
+  });
+  state.accounts = Array.isArray(data.accounts) ? data.accounts : state.accounts;
+  renderAccountSettings();
+  toast(account.disabled ? "账号已启用" : "账号已暂停");
+}
+
 function switchTab(tabId) {
   document.querySelectorAll(".nav").forEach((b) => {
     const tabs = (b.dataset.tabs || b.dataset.tab || "").split(/\s+/).filter(Boolean);
@@ -530,6 +714,9 @@ function switchTab(tabId) {
     loadVoices().catch((e) => toast(e.message));
     loadJobs().catch((e) => toast(e.message));
     syncExportFields();
+  }
+  if (tabId === "accountTab") {
+    loadAccounts().catch((e) => toast(e.message));
   }
   renderCockpit();
 }
@@ -583,14 +770,24 @@ function toggleSidebar() {
   applySidebarState();
 }
 
-function applyLoginPreset(type = "client") {
-  const preset = loginPresets[type] || loginPresets.client;
-  if ($("loginUsername")) $("loginUsername").value = preset.username;
-  if ($("loginPassword")) $("loginPassword").value = preset.password;
-  if ($("loginRoleNote")) $("loginRoleNote").textContent = preset.note;
-  document.querySelectorAll("[data-login-preset]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.loginPreset === type);
-  });
+function roleLabel(role) {
+  if (role === "admin") return "管理员";
+  if (role === "customer") return "客户";
+  if (role === "demo" || role === "tester") return "体验账号";
+  return role || "账号";
+}
+
+function formatAccountDate(value) {
+  if (!value) return "长期有效";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("zh-CN");
+}
+
+function setCurrentUser(user) {
+  state.user = user;
+  if ($("accountName")) $("accountName").textContent = `${user.username} / ${roleLabel(user.role)}`;
+  renderAccountSettings();
 }
 
 async function login() {
@@ -604,9 +801,8 @@ async function login() {
       }),
     });
     state.token = data.token;
-    state.user = data.user;
+    setCurrentUser(data.user);
     localStorage.setItem("aivf_token", state.token);
-    $("accountName").textContent = `${data.user.username} / ${data.user.role}`;
     showApp();
     await bootstrap();
   } catch (err) {
@@ -648,8 +844,7 @@ async function restoreSession() {
   }
   try {
     const data = await api("/api/me");
-    state.user = data.user;
-    $("accountName").textContent = `${data.user.username} / ${data.user.role}`;
+    setCurrentUser(data.user);
     showApp();
     await bootstrap();
   } catch {
@@ -3131,10 +3326,6 @@ function escapeHtml(value) {
 }
 
 function bindActions() {
-  document.querySelectorAll("[data-login-preset]").forEach((button) => {
-    button.addEventListener("click", () => applyLoginPreset(button.dataset.loginPreset));
-  });
-  applyLoginPreset("client");
   $("loginBtn").addEventListener("click", login);
   $("loginPassword").addEventListener("keydown", (e) => {
     if (e.key === "Enter") login();
@@ -3212,6 +3403,9 @@ function bindActions() {
   $("deleteFinishedSelectedBtn")?.addEventListener("click", () => deleteFinishedJobs([...state.selectedFinishedJobIds]).catch((e) => toast(e.message)));
   $("sidebarToggle").addEventListener("click", toggleSidebar);
   $("topExportBtn").addEventListener("click", () => switchTab("exportTab"));
+  $("saveAccountBtn")?.addEventListener("click", () => saveAccount());
+  $("resetAccountFormBtn")?.addEventListener("click", () => resetAccountForm());
+  $("refreshAccountsBtn")?.addEventListener("click", () => loadAccounts().catch((e) => toast(e.message)));
   $("editorGoLibraryBtn")?.addEventListener("click", () => switchTab("libraryTab"));
   if ($("viewFullScriptBtn")) $("viewFullScriptBtn").addEventListener("click", () => switchTab("scriptTab"));
   if ($("suggestionActionBtn")) {
@@ -3239,6 +3433,16 @@ function bindActions() {
     }
     if (event.target.closest("[data-close-asset-modal]")) {
       closeAssetGroupModal();
+      return;
+    }
+    const editAccountBtn = event.target.closest("[data-edit-account-id]");
+    if (editAccountBtn) {
+      editAccount(editAccountBtn.dataset.editAccountId);
+      return;
+    }
+    const toggleAccountBtn = event.target.closest("[data-toggle-account-id]");
+    if (toggleAccountBtn) {
+      toggleAccount(toggleAccountBtn.dataset.toggleAccountId).catch((e) => toast(e.message));
       return;
     }
     const selectAssetBtn = event.target.closest("[data-select-asset-id]");
