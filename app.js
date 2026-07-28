@@ -3241,6 +3241,11 @@ async function generateVideo() {
     body: JSON.stringify(payload),
   });
   state.lastRender = data.job;
+  if (data.job?.quota && state.user) {
+    state.user.clipsUsed = Number(data.job.quota.clipsUsed || state.user.clipsUsed || 0);
+    state.user.clipQuota = Number(data.job.quota.clipQuota || state.user.clipQuota || 0);
+    renderAccountSettings();
+  }
   setExportStatus(data.job.status === "done" ? "成片已生成，可以下载" : "成片生成失败", data.job.status === "done" ? "done" : "error");
   renderLatestExport();
   toast(data.job.status === "done" ? "视频已生成" : "视频生成失败");
