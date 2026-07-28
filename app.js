@@ -2599,6 +2599,14 @@ function getVoiceCloneErrorMessage(error) {
   return message || "声音克隆失败，请重新上传清晰声音样本";
 }
 
+function getVideoGenerateErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/FFmpeg|Editly|custom image|自定义镜像|任务服务器|501|not implemented/i.test(message)) {
+    return "成片剪辑服务还没部署，当前公开版已支持登录、文案、素材上传和配音；要一键生成成片，还需要先部署剪辑服务器。";
+  }
+  return message || "成片生成失败，请稍后再试";
+}
+
 async function createVoice() {
   const name = $("voiceName").value.trim();
   if (!name) {
@@ -3186,8 +3194,10 @@ async function generateVideo() {
   toast(data.job.status === "done" ? "视频已生成" : "视频生成失败");
   return data.job.status === "done";
   } catch (error) {
-    setExportStatus(`成片生成失败：${error.message}`, "error");
-    throw error;
+    const message = getVideoGenerateErrorMessage(error);
+    setExportStatus(message, "error");
+    toast(message);
+    return false;
   } finally {
     if (videoButton) {
       videoButton.disabled = false;
