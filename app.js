@@ -2247,6 +2247,31 @@ function isVoiceSampleUploadType(type) {
   return ["voice_sample", "audio"].includes(type);
 }
 
+function isVoiceSampleCandidate(asset = {}) {
+  const type = String(asset.type || "").toLowerCase();
+  if (type === "bgm") return false;
+  if (["voice_sample", "audio", "voiceover", "talking_head", "video"].includes(type)) return true;
+  const source = `${asset.name || ""} ${asset.url || ""}`.toLowerCase();
+  return /\.(mp3|wav|m4a|aac|ogg|opus|mp4|mov|m4v|webm)(\?|#|$)/i.test(source);
+}
+
+function formatDurationSeconds(seconds) {
+  const value = Number(seconds || 0);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  const rounded = Math.ceil(value);
+  if (rounded < 60) return `${rounded}秒`;
+  const minutes = Math.floor(rounded / 60);
+  const rest = String(rounded % 60).padStart(2, "0");
+  return `${minutes}:${rest}`;
+}
+
+function getVoiceSampleOptionLabel(asset = {}) {
+  const label = assetTypeLabels[asset.type] || asset.type || "素材";
+  const groupName = getAssetGroupName(getAssetLibraryId(asset));
+  const duration = formatDurationSeconds(asset.duration);
+  return [asset.name || "未命名素材", label, groupName, duration].filter(Boolean).join("｜");
+}
+
 async function uploadAssetThroughOss(file, libraryId, button, duration = 0) {
   const sign = await api("/api/oss/upload-url", {
     method: "POST",
@@ -2577,14 +2602,20 @@ function assetCard(a) {
 }
 
 function renderAssetOptions() {
-  const sampleTypes = ["voice_sample", "audio"];
-  const audioAssets = normalizeList(state.assets).filter((a) => sampleTypes.includes(a.type));
-  if ($("voiceSampleSelect")) {
-    if (!audioAssets.length) {
-      $("voiceSampleSelect").innerHTML = `<option value="">先上传 45 秒以内声音样本</option>`;
+  const voiceSampleAssets = normalizeList(state.assets).filter(isVoiceSampleCandidate);
+  const select = $("voiceSampleSelect");
+  if (select) {
+    const selected = select.value;
+    if (!voiceSampleAssets.length) {
+      select.innerHTML = `<option value="">先上传 45 秒以内声音样本、口播视频或音频素材</option>`;
       return;
     }
-    $("voiceSampleSelect").innerHTML = audioAssets.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("") || `<option value="">先上传声音样本或口播视频</option>`;
+    select.innerHTML = voiceSampleAssets
+      .map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(getVoiceSampleOptionLabel(a))}</option>`)
+      .join("") || `<option value="">先上传声音样本、口播视频或音频素材</option>`;
+    if (selected && voiceSampleAssets.some((a) => a.id === selected)) {
+      select.value = selected;
+    }
   }
 }
 
@@ -2857,7 +2888,8 @@ function getVoiceStatusLabel(status) {
 }
 
 function getVoiceDisplayName(voice, index = 0) {
-  return `声音项目 ${index + 1}`;
+  const name = String(voice?.name || "").trim();
+  return name || `声音项目 ${index + 1}`;
 }
 
 function renderVoiceList() {
