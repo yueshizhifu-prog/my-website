@@ -254,10 +254,16 @@ async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   headers["Content-Type"] = "application/json; charset=utf-8";
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  const res = await fetch(url, { ...options, headers, body: safeJsonBody(options.body) });
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers, body: safeJsonBody(options.body) });
+  } catch (error) {
+    const target = configuredApiBaseUrl || "本地服务器";
+    throw new Error(`后端连接失败：请检查云函数/服务器是否已部署并可访问（${target}）`);
+  }
   const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
-    throw new Error("后端服务未连接：请启动服务器后再操作");
+    throw new Error(`后端返回异常：接口没有返回 JSON，请检查云函数是否部署了正确 ZIP 包（${res.status}）`);
   }
   const data = await res.json();
   if (!res.ok || data.ok === false) {
