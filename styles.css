@@ -2701,9 +2701,19 @@ a { color: #ffd9e7; }
 
 @media (max-width: 760px) {
   body {
+    overflow-x: hidden;
     background:
       radial-gradient(circle at 18% 0%, rgba(203, 63, 124, .18), transparent 32%),
       linear-gradient(180deg, #170811 0%, #12060d 100%);
+  }
+
+  body,
+  .app,
+  .main,
+  .workspace-grid,
+  .wide-panel,
+  .panel {
+    max-width: 100%;
   }
 
   .login-shell {
@@ -2954,7 +2964,10 @@ a { color: #ffd9e7; }
   }
 
   .main {
+    width: 100%;
+    min-width: 0;
     padding: 18px 14px 26px;
+    overflow-x: hidden;
   }
 
   .topbar {
@@ -3006,6 +3019,12 @@ a { color: #ffd9e7; }
     padding: 16px;
   }
 
+  .wide-panel,
+  .compact-panel {
+    min-width: 0;
+    overflow: visible;
+  }
+
   .panel-head {
     gap: 10px;
     margin-bottom: 12px;
@@ -3040,6 +3059,21 @@ a { color: #ffd9e7; }
   .dossier-mini,
   .timeline-item {
     grid-template-columns: 1fr;
+  }
+
+  .editor-quick-settings {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .editor-audio-bar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .voice-speed-row {
+    padding-inline: 14px;
   }
 
   .voice-item,
@@ -3186,12 +3220,92 @@ a { color: #ffd9e7; }
   }
 
   .shot-table-wrap {
-    margin-inline: -2px;
+    margin-inline: 0;
     border-radius: 12px;
+    border: 0;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .shot-table,
+  .shot-table tbody,
+  .shot-table tr,
+  .shot-table td {
+    display: block;
+    width: 100%;
   }
 
   .shot-table {
-    min-width: 980px;
+    min-width: 0;
+    border-spacing: 0;
+  }
+
+  .shot-table thead,
+  .shot-table colgroup {
+    display: none;
+  }
+
+  .shot-table tr {
+    margin-bottom: 12px;
+    border: 1px solid rgba(203, 63, 124, .24);
+    border-radius: 14px;
+    background:
+      radial-gradient(circle at top left, rgba(203, 63, 124, .12), transparent 42%),
+      rgba(18, 6, 13, .36);
+    overflow: hidden;
+  }
+
+  .shot-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(203, 63, 124, .12);
+  }
+
+  .shot-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .shot-table td::before {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .shot-table td:nth-child(1)::before { content: "镜头"; }
+  .shot-table td:nth-child(2)::before { content: "口播文案"; }
+  .shot-table td:nth-child(3)::before { content: "分镜画面"; }
+  .shot-table td:nth-child(4)::before { content: "视频库匹配"; }
+
+  .shot-table td[colspan]::before {
+    content: "";
+    display: none;
+  }
+
+  .shot-table textarea {
+    min-height: 96px;
+  }
+
+  .shot-table select,
+  .shot-table textarea {
+    max-width: 100%;
+  }
+
+  .shot-table td:first-child {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .shot-table td:first-child::before {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .shot-delete-btn {
+    min-width: 68px;
+    min-height: 36px;
   }
 
   .toast {
