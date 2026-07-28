@@ -2630,8 +2630,22 @@ function getVoiceCloneErrorMessage(error) {
   return message || "声音克隆失败，请重新上传清晰声音样本";
 }
 
+function getTtsErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/Invalid voice specified|requested voice code|voice code does not exist|not licensed for use|当前克隆声音在阿里云不可用/i.test(message)) {
+    return "当前选择的克隆声音在阿里云不可用。请删除后用 45 秒以内清晰人声重新克隆，或者先切换为默认声音生成。";
+  }
+  if (/missing_tts_text/i.test(message)) return "请先填写配音文案";
+  if (/bailian_api_key_missing|BAILIAN_API_KEY|DASHSCOPE_API_KEY/i.test(message)) return "阿里云语音 API 还没有配置好";
+  if (/fetch failed|network|Failed to fetch/i.test(message)) return "阿里云语音接口连接失败，请稍后再试";
+  return message || "配音生成失败，请稍后再试";
+}
+
 function getVideoGenerateErrorMessage(error) {
   const message = String(error?.message || error || "");
+  if (/Invalid voice specified|requested voice code|voice code does not exist|not licensed for use|当前克隆声音在阿里云不可用/i.test(message)) {
+    return getTtsErrorMessage(error);
+  }
   if (/FFmpeg|Editly|custom image|自定义镜像|任务服务器|501|not implemented/i.test(message)) {
     return "成片剪辑服务还没部署，当前公开版已支持登录、文案、素材上传和配音；要一键生成成片，还需要先部署剪辑服务器。";
   }
@@ -3196,7 +3210,7 @@ async function generateVideo() {
         assetIds = Array.from(new Set([...assetIds, voiceAsset.id]));
       }
     } catch (error) {
-      toast(`配音生成失败，先生成无配音视频：${error.message}`);
+      toast(`配音生成失败，先生成无配音视频：${getTtsErrorMessage(error)}`);
     }
   }
   setExportStatus("成片合成中，请保持页面打开...", "running");
@@ -3563,7 +3577,11 @@ function bindActions() {
     renderAssetLibrary();
   });
   $("createVoiceBtn").addEventListener("click", () => createVoice().catch((e) => toast(e.message)));
-  $("ttsBtn").addEventListener("click", () => generateTts().catch((e) => toast(e.message)));
+  $("ttsBtn").addEventListener("click", () => generateTts().catch((e) => {
+    const message = getTtsErrorMessage(e);
+    setExportStatus(message, "error");
+    toast(message);
+  }));
   $("videoBtn").addEventListener("click", () => generateVideo().catch((e) => toast(e.message)));
   $("oneClickEditBtn")?.addEventListener("click", () => oneClickEditVideo().catch((e) => toast(e.message)));
   $("selectAllFinishedJobs")?.addEventListener("change", (event) => toggleAllFinishedJobs(event.target.checked));
