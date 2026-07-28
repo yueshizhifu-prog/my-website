@@ -41,6 +41,7 @@ const researchRegenerateStorageKey = "aivf_research_regen_window";
 const topicNumberLabels = ["一", "二", "三", "四", "五"];
 const assetGroupStorageKey = "aivf_asset_groups";
 const assetQuotaBytes = 5 * 1024 * 1024 * 1024;
+const voiceSampleMaxSeconds = 45;
 const workspaceDraftVersion = 1;
 const workspaceDraftFieldIds = [
   "modelMode",
@@ -2223,7 +2224,30 @@ function readFileAsDataUrl(file) {
   });
 }
 
-async function uploadAssetThroughOss(file, libraryId, button) {
+function readMediaDuration(file) {
+  return new Promise((resolve) => {
+    const media = document.createElement(file.type?.startsWith("audio/") ? "audio" : "video");
+    const url = URL.createObjectURL(file);
+    const cleanup = () => URL.revokeObjectURL(url);
+    media.preload = "metadata";
+    media.onloadedmetadata = () => {
+      const duration = Number(media.duration || 0);
+      cleanup();
+      resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+    };
+    media.onerror = () => {
+      cleanup();
+      resolve(0);
+    };
+    media.src = url;
+  });
+}
+
+function isVoiceSampleUploadType(type) {
+  return ["voice_sample", "audio"].includes(type);
+}
+
+async function uploadAssetThroughOss(file, libraryId, button, duration = 0) {
   const sign = await api("/api/oss/upload-url", {
     method: "POST",
     body: JSON.stringify({
@@ -2232,6 +2256,7 @@ async function uploadAssetThroughOss(file, libraryId, button) {
       size: file.size,
       type: $("assetType").value || "video",
       libraryId,
+      duration,
     }),
   });
   if (!sign.uploadUrl || !sign.objectKey) {
@@ -2257,6 +2282,7 @@ async function uploadAssetThroughOss(file, libraryId, button) {
       type: $("assetType").value || "video",
       libraryId,
       size: file.size,
+      duration,
       objectKey: sign.objectKey,
       url: sign.downloadUrl || sign.publicUrl || "",
     }),
@@ -2461,6 +2487,12 @@ async function uploadAsset() {
     toast(`素材库容量不足：当前限制 ${formatSize(assetQuotaBytes)}`);
     return;
   }
+  const assetType = $("assetType").value || "video";
+  const duration = isVoiceSampleUploadType(assetType) ? await readMediaDuration(file) : 0;
+  if (isVoiceSampleUploadType(assetType) && duration > voiceSampleMaxSeconds) {
+    toast(`声音样本请控制在 ${voiceSampleMaxSeconds} 秒以内，当前约 ${Math.ceil(duration)} 秒`);
+    return;
+  }
   const libraryId = $("assetLibrarySelect")?.value || "ungrouped";
   const button = $("uploadAssetBtn");
   const oldText = button?.textContent || "";
@@ -2473,7 +2505,7 @@ async function uploadAsset() {
   }
   try {
     if (configuredApiBaseUrl) {
-      await uploadAssetThroughOss(file, libraryId, button);
+      await uploadAssetThroughOss(file, libraryId, button, duration);
       $("assetFile").value = "";
       state.activeAssetGroupId = libraryId;
       localStorage.setItem("aivf_active_asset_group", state.activeAssetGroupId);
@@ -2483,7 +2515,7 @@ async function uploadAsset() {
     }
     const headers = {
       "X-Asset-Name": encodeURIComponent(file.name),
-      "X-Asset-Type": encodeURIComponent($("assetType").value || "video"),
+      "X-Asset-Type": encodeURIComponent(assetType),
       "X-Library-Id": encodeURIComponent(libraryId),
     };
     if (state.token) headers.Authorization = `Bearer ${state.token}`;
@@ -2545,11 +2577,26 @@ function assetCard(a) {
 }
 
 function renderAssetOptions() {
-  const sampleTypes = ["voice_sample", "talking_head", "audio", "video", "bgm"];
+  const sampleTypes = ["voice_sample", "audio"];
   const audioAssets = normalizeList(state.assets).filter((a) => sampleTypes.includes(a.type));
   if ($("voiceSampleSelect")) {
+    if (!audioAssets.length) {
+      $("voiceSampleSelect").innerHTML = `<option value="">先上传 45 秒以内声音样本</option>`;
+      return;
+    }
     $("voiceSampleSelect").innerHTML = audioAssets.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("") || `<option value="">先上传声音样本或口播视频</option>`;
   }
+}
+
+function getVoiceCloneErrorMessage(error) {
+  const message = String(error?.message || error || "");
+  if (/file too large|too large|413/i.test(message)) {
+    return `声音样本太长或文件太大，请上传 ${voiceSampleMaxSeconds} 秒以内的清晰人声小音频`;
+  }
+  if (/fetch failed|network|Failed to fetch/i.test(message)) {
+    return "声音克隆接口连接失败，请稍后再试";
+  }
+  return message || "声音克隆失败，请重新上传清晰声音样本";
 }
 
 async function createVoice() {
@@ -2560,6 +2607,11 @@ async function createVoice() {
   }
   const consent = $("voiceConsent").checked;
   const sampleAssetId = $("voiceSampleSelect").value;
+  const sampleAsset = normalizeList(state.assets).find((asset) => asset.id === sampleAssetId);
+  if (sampleAsset?.duration && Number(sampleAsset.duration) > voiceSampleMaxSeconds) {
+    toast(`声音样本请控制在 ${voiceSampleMaxSeconds} 秒以内，当前约 ${Math.ceil(Number(sampleAsset.duration))} 秒`);
+    return;
+  }
   if (!sampleAssetId) {
     toast("先选择声音样本");
     return;
@@ -2580,6 +2632,8 @@ async function createVoice() {
     $("voiceConsent").checked = false;
     toast(`声音克隆已完成：${data.voice.name}`);
     await loadVoices();
+  } catch (error) {
+    toast(getVoiceCloneErrorMessage(error));
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;
