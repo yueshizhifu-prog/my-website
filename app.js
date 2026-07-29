@@ -149,21 +149,21 @@ const templateLibrary = {
     {
       id: "traffic-video",
       name: "流量短视频",
-      content: "底层逻辑：流量的本质是人性。先过人脑筛选，再过平台筛选。\n思考框架：对象锚定 → 七情六欲点火 → 黄金 5 秒停留 → 场景承接 → 信任筛选 → 动作着陆。\n选题方向：反常识、被坑避雷、怕错过、怕掉队、轻松获得、替用户表达不满、老板真实观点。\n输出要求：先给 3-5 个选题，再选 1 个生成文案 + 分镜；口播每个短句尽量 8-12 字，少用逗号，开头必须有情绪张力。"
+      content: "底层逻辑：流量的本质是人性。先过人脑筛选，再过平台筛选。\n思考框架：对象锚定 → 七情六欲点火 → 黄金 5 秒停留 → 场景承接 → 信任筛选 → 动作着陆。\n选题方向：反常识、被坑避雷、怕错过、怕掉队、轻松获得、替目标客户表达真实顾虑。\n输出要求：内容必须讲给门店潜在客户听；每个选题都要生成独立且完全对应的完整文案和分镜。每个镜头口播是一句完整自然的话，禁止按字数切成残句；分镜只写在哪里拍、拍什么。"
     }
   ],
   "同城短视频": [
     {
       id: "local-city-video",
       name: "同城短视频",
-      content: "底层逻辑：同城不是只讲行业，而是用城市生活、天气、商圈、消费习惯、人群情绪等泛垂直内容圈住附近的人。\n思考框架：先选人群和年龄，再结合城市与门店档案，找到这个群体会停留、会共鸣、会到店的切口。\n选题方向：城市天气、附近生活、下班场景、家庭关系、聚会饭局、精致生活、避坑、省钱、松弛感。\n输出要求：必须结合已选人群和年龄范围，先给破圈选题，再生成内容 + 分镜；口播短句尽量 8-12 字，少打逗号。"
+      content: "底层逻辑：同城不是只讲行业，而是用城市生活、天气、商圈、消费习惯、人群情绪等泛垂直内容圈住附近的人。\n思考框架：先选人群和年龄，再结合城市与门店档案，找到这个群体会停留、会共鸣、会到店的切口。\n选题方向：城市天气、附近生活、下班场景、家庭关系、聚会饭局、精致生活、避坑、省钱、松弛感。\n输出要求：必须结合已选人群和年龄范围；每个选题都要生成独立且完全对应的完整文案和分镜。每个镜头口播是一句完整自然的话；分镜只写在哪里拍、拍什么。"
     }
   ],
   "团单短视频": [
     {
       id: "group-deal-video",
       name: "团单短视频",
-      content: "底层逻辑：团单短视频不是直接吆喝便宜，而是降低决策成本。\n思考框架：谁适合 → 为什么值 → 过程是否可信 → 到店怎么用 → 现在为什么要买。\n选题方向：套餐拆解、适合/不适合人群、真实体验流程、到店避坑、限时福利、老客推荐。\n输出要求：先给 3-5 个团单转化选题，再生成文案 + 分镜；表达要具体，不硬推；口播短句尽量 8-12 字。"
+      content: "底层逻辑：团单短视频不是直接吆喝便宜，而是降低决策成本。\n思考框架：谁适合 → 为什么值 → 过程是否可信 → 到店怎么用 → 现在为什么要买。\n选题方向：套餐拆解、适合/不适合人群、真实体验流程、到店避坑、限时福利、老客推荐。\n输出要求：每个选题都要生成独立且完全对应的完整文案和分镜；表达具体，不硬推。每个镜头口播是一句完整自然的话；分镜只写在哪里拍、拍什么。"
     }
   ]
 };
@@ -276,6 +276,7 @@ const apiErrorMessages = {
   tts_output_too_large: "配音文件过大，请缩短文案后再生成。",
   text_model_not_configured: "文案大模型还没有配置，请联系管理员。",
   text_model_unavailable: "文案大模型调用失败，请稍后再试。",
+  generated_content_inconsistent: "AI 生成的选题、文案和分镜没有完全对应，请重新生成一次。",
   tts_provider_failed: "阿里云语音接口调用失败，请检查语音模型和音色配置后重试。",
   tts_generation_failed: "逐镜头配音生成失败，不能进行剪辑，请稍后重试。",
   voice_not_ready: "声音不存在或尚未克隆完成，请重新选择。",
@@ -1140,7 +1141,7 @@ function resetScriptGenerationDraft() {
     : "已导入基础档案库，等待生成脚本";
   if ($("scriptTopicIdeas")) $("scriptTopicIdeas").placeholder = "已导入档案。点击下方按钮后，DeepSeek 会先思考，再生成可选选题。";
   if ($("resultScript")) $("resultScript").placeholder = "这里不会自动套模板；生成后才会出现可直接照着念的口播文案。";
-  if ($("resultPrompts")) $("resultPrompts").placeholder = "生成后会按同一镜头匹配：口播文案、拍摄场景/动作、需要素材。";
+  if ($("resultPrompts")) $("resultPrompts").placeholder = "生成后会按同一镜头显示：完整口播、在哪里拍、拍什么、需要什么素材。";
   renderTopicIdeas([]);
   renderTopicChoiceBar();
   clearShotTableView();
@@ -1523,6 +1524,16 @@ function normalizeStringList(value) {
   return [];
 }
 
+function normalizeShotPromptList(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === "string" || (item && typeof item === "object"));
+  }
+  if (typeof value === "string") {
+    return value.split(/\n+/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function cleanTopicTitle(value) {
   return String(value || "")
     .replace(/^[-*●\s]*/, "")
@@ -1599,108 +1610,6 @@ function inferMaterialLabel(text) {
   return "口播视频";
 }
 
-function buildTopicScript(title, index = 0) {
-  const brief = collectBrief();
-  const industry = brief.storeIndustry || "本地生活";
-  const brand = brief.brandName || "我们店";
-  const city = brief.storeCity || "本地";
-  const name = brief.personaName || "老板";
-  const mainProduct = brief.mainProduct || "主推项目";
-  const advantage = brief.serviceAdvantage || "真实、专业、省心";
-  if (state.activeTemplateCategory === "同城短视频") {
-    return [
-      `镜头一：如果你也在${city}。选店别只看价格。`,
-      `镜头二：我叫${name}。在${brand}做${industry}。`,
-      `镜头三：今天讲${title}。先帮你少踩坑。`,
-      `镜头四：先看环境。再看过程。还要看反馈。`,
-      `镜头五：刚好在附近。先收藏再慢慢看。`,
-    ].join("\n");
-  }
-  if (state.activeTemplateCategory === "团单短视频") {
-    return [
-      `镜头一：这个${mainProduct}。不是谁都适合。`,
-      `镜头二：先别急着下单。先看你适不适合。`,
-      `镜头三：重点不是便宜。是流程要讲清楚。`,
-      `镜头四：到店先确认需求。再安排对应服务。`,
-      `镜头五：担心买错。可以先私信问我。`,
-    ].join("\n");
-  }
-  return [
-    `镜头一：视频没效果。往往不是不会拍。`,
-    `镜头二：今天讲${title}。先抓住客户担心。`,
-    `镜头三：我叫${name}。在${brand}做${industry}。`,
-    `镜头四：优势是${advantage}。但别只喊口号。`,
-    `镜头五：先让客户看懂。再让客户咨询。`,
-  ].join("\n");
-}
-
-function buildTopicShotPrompts(title, index = 0) {
-  const brief = collectBrief();
-  const brand = brief.brandName || "门店";
-  const city = brief.storeCity || "本地";
-  const scriptLines = buildTopicScript(title, index).split(/\n+/).map(stripSpokenLine);
-  const scenes = [
-    `${brief.personaName || "老板"}站在${brand}门口或前台，手机竖屏正对镜头开场，背景能看到门店标识`,
-    `切到${city}街区、商圈或门店外景，画面节奏快一点，承接同城感和真实场景`,
-    `拍服务流程、项目操作或产品细节特写，动作要清楚，让客户能看懂你在做什么`,
-    `切顾客反馈、门店环境、前后对比或案例照片，画面停留 2-3 秒给观众看清楚`,
-    `回到老板口播，镜头靠近一点，给出收藏、私信、到店体验或团购领取动作`,
-  ];
-  return scenes.map((scene, idx) => {
-    const material = inferMaterialLabel(scene);
-    return `镜头 ${String(idx + 1).padStart(2, "0")}：文案：${scriptLines[idx] || title}；画面：${scene}；素材：${material}`;
-  });
-}
-
-function normalizeExecutableScript(script, title, index = 0) {
-  const lines = splitScriptSentences(script);
-  if (lines.length < 3) return buildTopicScript(title, index);
-  return lines.slice(0, 6).map((line, idx) => `镜头${topicNumberLabels[idx] || idx + 1}：${line}`).join("\n");
-}
-
-function normalizeShotPrompts(prompts, title, index = 0) {
-  const scriptLines = buildTopicScript(title, index).split(/\n+/).map(stripSpokenLine);
-  return prompts.slice(0, 6).map((line, idx) => {
-    const clean = String(line || "").trim();
-    if (/文案[:：].+画面[:：]/.test(clean)) return clean;
-    return `镜头 ${String(idx + 1).padStart(2, "0")}：文案：${scriptLines[idx] || title}；画面：${clean}；素材：${inferMaterialLabel(clean)}`;
-  });
-}
-
-function buildFallbackTopicOptions(result = {}) {
-  const brief = collectBrief();
-  const industry = brief.storeIndustry || "本地生活";
-  const brand = brief.brandName || "门店";
-  const city = brief.storeCity || "本地";
-  const location = brief.storeLocation || city;
-  const mainProduct = brief.mainProduct || "主推套餐";
-  let base = [];
-  if (state.activeTemplateCategory === "同城短视频") {
-    base = [
-      { title: `${city}下班后，为什么越来越多人想找一家省心的店`, reason: "用城市生活场景圈住附近人群，再自然承接门店信任。" },
-      { title: `住在${location}附近，怎么判断一家店靠不靠谱`, reason: "同城用户先关心距离和风险，适合用避坑切口破圈。" },
-      { title: `${city}人最近最容易忽略的一次到店消费选择`, reason: "从本地生活习惯切入，不直接硬讲行业，更容易停留。" },
-    ];
-  } else if (state.activeTemplateCategory === "团单短视频") {
-    base = [
-      { title: `${mainProduct}到底适合谁，不适合谁`, reason: "先降低决策成本，让用户判断自己该不该买。" },
-      { title: `第一次到${brand}使用团单，先看这几个细节`, reason: "把流程讲清楚，减少到店前的不确定感。" },
-      { title: `这个套餐为什么不是单纯便宜，而是省心`, reason: "把价格锚点转成价值锚点，适合转化。" },
-    ];
-  } else {
-    base = [
-      { title: `很多${industry}视频没效果，不是因为不会拍`, reason: "用反常识切入，先抓停留，再讲真实判断。" },
-      { title: `客户不信任你，往往不是价格问题`, reason: "击中老板和客户之间的信任卡点，适合制造共鸣。" },
-      { title: `${industry}里最容易让客户踩坑的一件事`, reason: "避坑天然带情绪和收藏动作，适合流量入口。" },
-    ];
-  }
-  const modelTitle = cleanTopicTitle(result.title);
-  if (modelTitle && !/脚本|Untitled/i.test(modelTitle) && !base.some((item) => item.title === modelTitle)) {
-    base.unshift({ title: modelTitle, reason: "DeepSeek 推荐的主选题，已放在第一位。" });
-  }
-  return base.slice(0, 3);
-}
-
 function normalizeTopicOptions(result = {}) {
   const rawOptions = Array.isArray(result.topicOptions) ? result.topicOptions : [];
   const parsedOptions = rawOptions.map((option) => ({
@@ -1710,26 +1619,47 @@ function normalizeTopicOptions(result = {}) {
     shotPrompts: option?.shotPrompts || option?.shots || option?.storyboard,
     tags: option?.tags,
   }));
-  const strategyOptions = parseTopicOptionsFromStrategy(result.strategy);
-  const seedOptions = [...parsedOptions, ...strategyOptions].filter((option) => cleanTopicTitle(option.title));
-  const baseOptions = seedOptions.length ? seedOptions : buildFallbackTopicOptions(result);
   const unique = [];
-  baseOptions.forEach((option) => {
+  parsedOptions.forEach((option) => {
     const title = cleanTopicTitle(option.title);
     if (!title || unique.some((item) => item.title === title)) return;
     unique.push({ ...option, title });
   });
-  return unique.slice(0, 5).map((option, index) => {
-    const title = cleanTopicTitle(option.title) || buildFallbackTopicOptions(result)[index]?.title || `选题${topicNumberLabels[index] || index + 1}`;
-    const directScript = option.script || (index === 0 ? result.script : "");
-    const rawShotPrompts = normalizeStringList(option.shotPrompts).length
-      ? normalizeStringList(option.shotPrompts)
-      : (index === 0 ? normalizeStringList(result.shotPrompts) : []);
+  if (unique.length !== 3) {
+    throw new Error("AI 没有完整返回 3 个选题，请重新生成。");
+  }
+  return unique.map((option, index) => {
+    const title = cleanTopicTitle(option.title);
+    const scriptValue = Array.isArray(option.script) ? option.script.join("\n") : option.script;
+    const scriptLines = splitScriptSentences(scriptValue);
+    const rawShotPrompts = normalizeShotPromptList(option.shotPrompts);
+    if (scriptLines.length < 2 || scriptLines.length > 8 || cleanComparableText(scriptLines.join("")).length < 45 || rawShotPrompts.length !== scriptLines.length) {
+      throw new Error(`选题${topicNumberLabels[index] || index + 1}的文案和分镜没有完整对应，请重新生成。`);
+    }
+    const shotPrompts = rawShotPrompts.map((prompt, shotIndex) => {
+      const parsed = parseShotLine(prompt);
+      const expectedText = cleanVoiceoverLine(scriptLines[shotIndex]);
+      const material = parsed.materialLabel || inferMaterialLabel(`${parsed.location} ${parsed.action} ${expectedText}`);
+      const location = parsed.location || defaultStoryboardLocation(material);
+      const action = parsed.action || defaultStoryboardAction(material);
+      if (!expectedText) {
+        throw new Error(`选题${topicNumberLabels[index] || index + 1}的第 ${shotIndex + 1} 句口播为空，请重新生成。`);
+      }
+      if (/近景|远景|中景|特写|推进|推镜|拉远|运镜|景别|机位|构图|焦点|虚化|语气|语速|神情|神态|表情|情绪|节奏|镜头语言|微笑|严肃|嫌弃|亲切|自信/.test(`${location} ${action}`)) {
+        throw new Error(`选题${topicNumberLabels[index] || index + 1}的第 ${shotIndex + 1} 个分镜包含多余拍摄指导，请重新生成。`);
+      }
+      return {
+        voiceover: expectedText,
+        location,
+        action,
+        material,
+      };
+    });
     return {
       title,
       reason: cleanTopicReason(option.reason),
-      script: normalizeExecutableScript(directScript, title, index),
-      shotPrompts: rawShotPrompts.length ? normalizeShotPrompts(rawShotPrompts, title, index) : buildTopicShotPrompts(title, index),
+      script: scriptLines.map((line, shotIndex) => `镜头${topicNumberLabels[shotIndex] || shotIndex + 1}：${cleanVoiceoverLine(line)}`).join("\n"),
+      shotPrompts,
       tags: Array.isArray(option.tags) ? option.tags : (Array.isArray(result.tags) ? result.tags : []),
     };
   });
@@ -1782,108 +1712,28 @@ function applySelectedTopic(index = 0, options = {}) {
 }
 
 function getTopicShotRows(topic = {}) {
-  const promptRows = normalizeStringList(topic.shotPrompts).map(parseShotLine).filter((row) => row.text || row.visual);
+  const promptRows = normalizeShotPromptList(topic.shotPrompts).map(parseShotLine).filter((row) => row.text || row.visual);
   const scriptRows = String(topic.script || "")
     .split(/\n+/)
     .map((line) => cleanVoiceoverLine(line))
     .filter(Boolean);
-  const fallbackPrompts = buildTopicShotPrompts(topic.title || "选题", state.selectedTopicIndex || 0).map(parseShotLine);
-  const count = Math.max(promptRows.length, scriptRows.length, 4);
-  const rows = Array.from({ length: Math.min(count, 8) }).map((_, index) => {
-    const prompt = promptRows[index] || fallbackPrompts[index] || {};
-    const promptText = cleanVoiceoverLine(prompt.text || "");
-    const text = isInstructionalSpokenText(promptText)
-      ? cleanVoiceoverLine(scriptRows[index] || topic.title || "")
-      : cleanVoiceoverLine(promptText || scriptRows[index] || topic.title || "");
-    const visual = cleanVisualLine(prompt.visual || inferVisual(text, assetTypeLabels[prompt.materialType] || "口播画面"));
+  if (promptRows.length !== scriptRows.length || scriptRows.length < 2) {
+    throw new Error("当前选题的文案和分镜没有完整对应，请重新生成。");
+  }
+  return scriptRows.slice(0, 8).map((text, index) => {
+    const prompt = promptRows[index];
+    const visual = cleanVisualLine(prompt.visual || `${prompt.location}，${prompt.action}`);
     const materialType = prompt.materialType || inferMaterialType(`${text} ${visual}`) || assetOrder[index % assetOrder.length][0];
     const materialLabel = prompt.materialLabel || assetTypeLabels[materialType] || inferMaterialLabel(`${text} ${visual}`);
     return {
       text,
+      location: prompt.location,
+      action: prompt.action,
       visual,
       materialType,
       materialLabel,
     };
   }).filter((row) => row.text);
-  return expandShotRowsForEditing(rows, 12);
-}
-
-function expandShotRowsForEditing(rows, limit = 12) {
-  const expanded = [];
-  normalizeList(rows).forEach((row) => {
-    const segments = splitVoiceoverForShot(row.text);
-    if (!segments.length) return;
-    segments.forEach((segment, segmentIndex) => {
-      expanded.push({
-        ...row,
-        text: segment,
-        visual: segmentIndex === 0
-          ? cleanVisualLine(row.visual || inferVisual(segment, row.materialLabel || "口播画面"))
-          : continueVisualForSegment(row.visual, row.materialLabel, segmentIndex),
-      });
-    });
-  });
-  return expanded.slice(0, limit);
-}
-
-function splitVoiceoverForShot(text = "", target = 12, max = 16) {
-  const clean = cleanVoiceoverLine(text)
-    .replace(/[，,、；;：:]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!clean) return [];
-  const rawParts = clean
-    .split(/(?<=[。！？!?])|\s+/)
-    .map((part) => part.replace(/[。！？!?]/g, "").trim())
-    .filter(Boolean);
-  const sourceParts = rawParts.length ? rawParts : [clean];
-  const segments = [];
-  sourceParts.forEach((part) => {
-    splitTextByLength(part, target, max).forEach((segment) => segments.push(segment));
-  });
-  if (segments.length > 1 && segments[segments.length - 1].length < 5) {
-    const tail = segments.pop();
-    segments[segments.length - 1] = `${segments[segments.length - 1]}${tail}`;
-  }
-  return segments;
-}
-
-function splitTextByLength(text = "", target = 12, max = 16) {
-  const value = String(text || "").trim();
-  if (!value) return [];
-  if (value.length <= max) return [value];
-  const result = [];
-  let rest = value;
-  while (rest.length > max) {
-    let cut = findNaturalCut(rest, target, max);
-    if (cut < 6) cut = Math.min(target, rest.length);
-    result.push(rest.slice(0, cut).trim());
-    rest = rest.slice(cut).trim();
-  }
-  if (rest) result.push(rest);
-  return result.filter(Boolean);
-}
-
-function findNaturalCut(text, target, max) {
-  const preferred = ["但是", "所以", "因为", "如果", "然后", "先", "再", "才", "就", "让", "看", "做", "省", "比"];
-  for (let i = Math.min(max, text.length - 1); i >= 6; i -= 1) {
-    const left = text.slice(Math.max(0, i - 2), i + 2);
-    if (preferred.some((word) => left.includes(word)) && Math.abs(i - target) <= 5) return i;
-  }
-  return Math.min(target, max, text.length);
-}
-
-function continueVisualForSegment(visual = "", materialLabel = "", index = 1) {
-  const base = cleanVisualLine(visual || materialLabel || "同一场景继续拍");
-  if (/近景|特写|细节|动作|切/.test(base)) return base;
-  return `${base}，补拍近景或动作细节 ${index + 1}`;
-}
-
-function isInstructionalSpokenText(text = "") {
-  const value = String(text || "");
-  if (!value) return false;
-  return /你要|需要|应该|可以|说明|讲解|表达|强调|展示|引导|告诉客户|说出|突出/.test(value) &&
-    !/我|我们|你如果|如果你|先看|别急|记住|收藏|私信|到店/.test(value);
 }
 
 function formatScriptRows(rows) {
@@ -1896,7 +1746,7 @@ function formatVoiceoverRows(rows) {
 
 function formatPromptRows(rows) {
   return rows.map((row, index) => (
-    `镜头 ${String(index + 1).padStart(2, "0")}｜口播：${row.text}｜拍摄：${row.visual}｜素材：${row.materialLabel}`
+    `镜头 ${String(index + 1).padStart(2, "0")}｜口播：${row.text}｜地点：${row.location || "门店内"}｜拍什么：${row.action || row.visual}｜素材：${row.materialLabel}`
   )).join("\n");
 }
 
@@ -2027,6 +1877,38 @@ function cleanVoiceoverLine(value = "") {
     .trim();
 }
 
+function cleanComparableText(value = "") {
+  return cleanVoiceoverLine(value)
+    .replace(/[，,。！？!?；;：:\s]+/g, "")
+    .trim();
+}
+
+function simplifyStoryboardText(value = "") {
+  const unwanted = /近景|远景|中景|特写|推进|推镜|拉远|运镜|景别|机位|构图|焦点|虚化|语气|语速|神情|神态|表情|情绪|节奏|镜头语言|微笑|严肃|嫌弃|亲切|自信/;
+  return String(value || "")
+    .split(/[，,；;。]/)
+    .map((part) => part.trim())
+    .filter((part) => part && !unwanted.test(part))
+    .join("，");
+}
+
+function defaultStoryboardLocation(material = "") {
+  if (/项目|过程|护理|服务/.test(material)) return "项目操作区";
+  if (/产品|团购|套餐/.test(material)) return "产品展示区";
+  if (/反馈|案例|顾客/.test(material)) return "店内展示区";
+  if (/环境|门店/.test(material)) return "门店门口或店内";
+  return "门店内";
+}
+
+function defaultStoryboardAction(material = "") {
+  const personaName = collectBrief().personaName || "老板";
+  if (/项目|过程|护理|服务/.test(material)) return "拍实际服务过程";
+  if (/产品|团购|套餐/.test(material)) return "拍项目或套餐内容";
+  if (/反馈|案例|顾客/.test(material)) return "拍真实反馈内容";
+  if (/环境|门店/.test(material)) return "拍门头和店内环境";
+  return `${personaName}在这里讲这句话`;
+}
+
 function cleanVisualLine(value = "") {
   return String(value || "")
     .replace(/^\s*(?:画面|拍摄|分镜画面|分镜|场景|动作)\s*[:：]\s*/i, "")
@@ -2083,7 +1965,7 @@ function buildShotsFromInputs() {
   const rows = promptLines.length
     ? promptLines.map(parseShotLine)
     : scriptLines.map((text, index) => ({ text, visual: inferVisual(text, assetOrder[index % assetOrder.length][1]) }));
-  return expandShotRowsForEditing(rows, 12).map((parsed, index) => {
+  return rows.map((parsed, index) => {
     const [materialType, label] = assetOrder[index % assetOrder.length];
     const visual = cleanVisualLine(parsed.visual || inferVisual(parsed.text, label));
     const finalMaterialType = parsed.materialType || inferMaterialType(`${parsed.text} ${visual} ${parsed.materialLabel || ""}`) || materialType;
@@ -2101,16 +1983,36 @@ function buildShotsFromInputs() {
 }
 
 function parseShotLine(line) {
+  if (line && typeof line === "object") {
+    const text = cleanVoiceoverLine(line.voiceover || line.text || line.script || line.copy || "");
+    const location = simplifyStoryboardText(cleanVisualLine(line.location || line.place || line.scene || ""));
+    const action = simplifyStoryboardText(cleanVisualLine(line.action || line.whatToShoot || line.content || line.visual || ""));
+    const materialLabel = String(line.material || line.materialLabel || line.asset || line.assetType || "").trim()
+      || inferMaterialLabel(`${text} ${location} ${action}`);
+    const visual = [location, action].filter(Boolean).join("，");
+    return {
+      text,
+      location,
+      action,
+      visual,
+      materialType: inferMaterialType(`${visual} ${materialLabel}`),
+      materialLabel,
+    };
+  }
   const raw = String(line || "").replace(/^[-*●\s]*/, "").trim();
   const textMatch = raw.match(/(?:口播文案|文案内容|文案|口播|台词)[:：]\s*([^|｜；;]+)/);
+  const locationMatch = raw.match(/(?:地点|在哪里拍|场地)[:：]\s*([^|｜；;]+)/);
+  const actionMatch = raw.match(/(?:拍什么|拍摄内容|内容)[:：]\s*([^|｜；;]+)/);
   const visualMatch = raw.match(/(?:分镜画面|拍摄指导|拍摄|画面|分镜|场景|动作)[:：]\s*([^|｜；;]+)/);
   const materialMatch = raw.match(/(?:素材分类|需要素材|素材|视频库)[:：]\s*([^|｜；;]+)/);
   const text = cleanVoiceoverLine(textMatch ? textMatch[1] : raw);
-  const visual = cleanVisualLine(visualMatch ? visualMatch[1] : "");
+  const location = simplifyStoryboardText(cleanVisualLine(locationMatch ? locationMatch[1] : ""));
+  const action = simplifyStoryboardText(cleanVisualLine(actionMatch ? actionMatch[1] : ""));
+  const visual = cleanVisualLine([location, action].filter(Boolean).join("，") || (visualMatch ? visualMatch[1] : ""));
   const materialLabel = (materialMatch ? materialMatch[1] : "").trim() || inferMaterialLabel(`${text} ${visual}`);
   const materialSource = `${visual} ${materialLabel} ${raw}`;
   const materialType = inferMaterialType(materialSource);
-  return { text, visual, materialType, materialLabel };
+  return { text, location, action, visual, materialType, materialLabel };
 }
 
 function splitScriptToShots() {
