@@ -3508,6 +3508,8 @@ function hydrateFinishedVideoPreviews(container) {
   container.querySelectorAll(".finished-video-preview video").forEach((video) => {
     video.muted = true;
     video.playsInline = true;
+    const originalSrc = video.currentSrc || video.src;
+    let loadRetries = 0;
     const seekToPreviewFrame = () => {
       const duration = Number(video.duration || 0);
       if (Number.isFinite(duration) && duration > 0.35) {
@@ -3517,13 +3519,23 @@ function hydrateFinishedVideoPreviews(container) {
     if (video.readyState >= 1) seekToPreviewFrame();
     else video.addEventListener("loadedmetadata", seekToPreviewFrame, { once: true });
     video.addEventListener("error", () => {
+      if (loadRetries < 4 && originalSrc) {
+        loadRetries += 1;
+        setTimeout(() => {
+          video.removeAttribute("src");
+          video.load();
+          video.src = originalSrc;
+          video.load();
+        }, loadRetries * 5000);
+        return;
+      }
       const preview = video.closest(".finished-video-preview");
       if (!preview || preview.querySelector(".finished-video-empty")) return;
       const empty = document.createElement("div");
       empty.className = "finished-video-empty";
-      empty.textContent = "视频加载失败";
+      empty.textContent = "视频暂未就绪，请稍后刷新";
       preview.appendChild(empty);
-    }, { once: true });
+    });
   });
 }
 
