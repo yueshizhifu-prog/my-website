@@ -1606,46 +1606,67 @@ button:hover { filter: brightness(1.08); }
 }
 
 .template-preview {
-  padding: 14px;
+  display: block;
+  padding: 12px 14px;
   border: 1px dashed var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   color: #f5c5d8;
-  line-height: 1.7;
+  line-height: 1.55;
   background: rgba(18, 6, 13, .38);
+}
+
+.template-preview strong {
+  display: block;
+  color: #fff4fa;
+  font-size: 16px;
+  line-height: 1.45;
 }
 
 .template-preview span {
   display: block;
-  margin-top: 4px;
+  margin-top: 5px;
   color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .dossier-mini {
   display: grid;
-  grid-template-columns: minmax(160px, 220px) 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  margin: 8px 0 18px;
-  padding: 12px;
+  gap: 12px;
+  margin: 8px 0 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(203, 63, 124, .24);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, .035);
 }
 
 .dossier-mini button {
   width: 100%;
+  min-height: 44px;
+  padding-inline: 12px;
+  font-size: 15px;
+}
+
+.dossier-mini > div {
+  min-width: 0;
 }
 
 .dossier-mini strong {
   display: block;
   color: #fff4fa;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .dossier-mini span {
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .dossier-mini.field-missing {
@@ -2466,10 +2487,10 @@ a { color: #ffd9e7; }
 }
 
 .generation-progress {
-  margin: 14px 0 16px;
+  margin: 12px 0 14px;
   border: 1px solid rgba(203, 63, 124, .32);
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 12px;
   background:
     radial-gradient(circle at top left, rgba(203, 63, 124, .24), transparent 34%),
     rgba(18, 6, 13, .62);
@@ -2507,8 +2528,8 @@ a { color: #ffd9e7; }
 }
 
 .progress-track {
-  height: 9px;
-  margin-top: 12px;
+  height: 8px;
+  margin-top: 10px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, .08);
@@ -2526,22 +2547,22 @@ a { color: #ffd9e7; }
 .progress-steps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .progress-step {
   min-width: 0;
   border: 1px solid rgba(203, 63, 124, .18);
   border-radius: 999px;
-  padding: 7px 9px;
+  padding: 6px 8px;
   color: rgba(255, 217, 231, .62);
   background: rgba(255, 255, 255, .035);
   font-size: 12px;
+  line-height: 1.3;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .progress-step.active {
@@ -2560,6 +2581,34 @@ a { color: #ffd9e7; }
 }
 
 @media (max-width: 760px) {
+  .dossier-mini {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .dossier-mini button {
+    min-height: 42px;
+  }
+
+  .template-preview {
+    margin-bottom: 12px;
+    padding: 11px 12px;
+  }
+
+  .template-preview strong {
+    font-size: 15px;
+  }
+
+  .template-preview span {
+    font-size: 13px;
+  }
+
+  .generation-progress {
+    margin: 10px 0 12px;
+    padding: 11px;
+  }
+
   .account-self-card,
   .account-layout,
   .account-row {
@@ -3331,9 +3380,12 @@ a { color: #ffd9e7; }
 
   .account-self-card,
   .finished-library-toolbar,
-  .progress-steps,
   .edit-progress-steps {
     grid-template-columns: 1fr;
+  }
+
+  .progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .account-row-actions {
