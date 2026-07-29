@@ -54,15 +54,24 @@ function run(cmd, args, timeoutMs = 600000) {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
+    let stdout = '';
     const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs);
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
     child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
-    child.on('close', (code) => { clearTimeout(timer); resolve({ code, stderr }); });
-    child.on('error', (error) => { clearTimeout(timer); resolve({ code: -1, stderr: error.message }); });
+    child.on('close', (code) => { clearTimeout(timer); resolve({ code, stderr, stdout }); });
+    child.on('error', (error) => { clearTimeout(timer); resolve({ code: -1, stderr: error.message, stdout }); });
   });
 }
 
 function cleanText(value, max = 100) {
   return String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function wrapCaption(value, columns = 18) {
+  const chars = Array.from(cleanText(value, 120));
+  const lines = [];
+  while (chars.length) lines.push(chars.splice(0, columns).join(''));
+  return lines.join('\n');
 }
 
 function pickFont() {
@@ -90,11 +99,31 @@ async function downloadAsset(asset, directory) {
   return path;
 }
 
-async function renderSegment(jobDir, index, shot, sourcePath, sourceAsset) {
-  const duration = Math.max(2, Math.min(12, Number(shot?.duration || 4)));
+async function mediaDuration(path) {
+  const result = await run('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', path,
+  ], 30000);
+  const duration = Number(result.stdout.trim());
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
+
+function buildSegmentDurations(shots, voiceSeconds) {
+  if (!(voiceSeconds > 0)) {
+    return shots.map((shot) => Math.max(2, Math.min(12, Number(shot?.duration || 4))));
+  }
+  const weights = shots.map((shot) => Math.max(1, Array.from(cleanText(shot?.text || shot?.visual || '', 120)).length));
+  const minimum = 2;
+  const target = Math.max(voiceSeconds + 0.15, minimum * shots.length);
+  const remaining = Math.max(0, target - minimum * shots.length);
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0) || 1;
+  return weights.map((weight) => minimum + (remaining * weight / weightTotal));
+}
+
+async function renderSegment(jobDir, index, shot, sourcePath, sourceAsset, plannedDuration) {
+  const duration = Math.max(2, Math.min(24, Number(plannedDuration || shot?.duration || 4)));
   const segmentPath = join(jobDir, `segment-${String(index).padStart(3, '0')}.mp4`);
   const subtitlePath = join(jobDir, `subtitle-${String(index).padStart(3, '0')}.txt`);
-  await writeFile(subtitlePath, cleanText(shot?.text || shot?.visual || '', 90), 'utf8');
+  await writeFile(subtitlePath, wrapCaption(shot?.text || shot?.visual || '', 18), 'utf8');
   const font = pickFont();
   const fontArg = font ? `fontfile=${font}:` : '';
   const vf = [
@@ -132,10 +161,11 @@ async function renderVideo(body, req) {
   for (const asset of assets) downloaded.set(asset.id, await downloadAsset(asset, jobDir));
   const voice = assets.find((asset) => String(asset.type || '').toLowerCase() === 'voiceover');
   if (!voice || !downloaded.get(voice.id)) return { ok: false, error: 'voice_not_matched' };
+  const durations = buildSegmentDurations(shots, await mediaDuration(downloaded.get(voice.id)));
 
   const segments = [];
   for (const entry of visualShots) {
-    segments.push(await renderSegment(jobDir, entry.index, entry.shot, downloaded.get(entry.asset.id), entry.asset));
+    segments.push(await renderSegment(jobDir, entry.index, entry.shot, downloaded.get(entry.asset.id), entry.asset, durations[entry.index]));
   }
   const concatPath = join(jobDir, 'segments.txt');
   await writeFile(concatPath, segments.map((path) => `file '${path.replace(/'/g, "'\\\\''")}'`).join('\n'), 'utf8');
