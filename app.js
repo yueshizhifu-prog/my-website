@@ -1873,7 +1873,10 @@ function applyAiResult(data, taskType = "") {
   const r = data.result || {};
   if (taskType === "research" || r.taskType === "research") state.lastResearch = r;
   const activeMode = (taskType === "script" || r.taskType === "script") ? ($("scriptModelMode")?.value || "fast") : ($("modelMode")?.value || "fast");
-  const modelLine = `${data.provider || r.provider || "local"} / ${r.mode || activeMode} / ${r.model || "local-template"}`;
+  const provider = String(data.provider || r.provider || "local").toLowerCase();
+  const mode = r.mode || activeMode;
+  const providerName = provider === "deepseek" ? "DeepSeek" : (provider === "local-template" || provider === "local" ? "本地模板" : provider);
+  const modelLine = `${providerName} · ${mode === "thinking" ? "深度分析" : "快速生成"}`;
   if (taskType === "research" || r.taskType === "research") {
     $("modelBadge").textContent = modelLine;
   }
