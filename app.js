@@ -3322,13 +3322,20 @@ function getFinishedJobId(job) {
 
 function isFinishedVideoJob(job) {
   const url = String(job?.outputUrl || "").trim();
-  if (!url) return false;
   const type = String(job?.type || "").toLowerCase();
+  if (type === "video") return true;
+  if (!url) return false;
   const isVideoUrl = /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(url);
   const isAudioUrl = /\.(mp3|wav|m4a|aac)(?:$|\?)/i.test(url);
   if (isAudioUrl) return false;
   if (type && type !== "video") return false;
   return isVideoUrl || String(job?.provider || "").includes("ffmpeg") || String(job?.provider || "").includes("editly");
+}
+
+function canPreviewFinishedJob(job) {
+  const url = String(job?.outputUrl || "").trim();
+  if (!url || job?.status !== "done") return false;
+  return /^https:\/\//i.test(url) || window.location.protocol !== "https:";
 }
 
 function previewFrameUrl(url) {
@@ -3373,14 +3380,16 @@ function renderLatestExport() {
     const url = job.outputUrl || "";
     const cardPreviewUrl = previewFrameUrl(url);
     const isDone = job.status === "done" && url;
+    const canPreview = canPreviewFinishedJob(job);
+    const storageIssue = isDone && !canPreview;
     const title = job.title || `成品效果 ${index + 1}`;
     const jobId = getFinishedJobId(job);
     const checked = state.selectedFinishedJobIds.has(jobId);
     return `<article class="finished-video-card ${checked ? "selected" : ""}">
-      <div class="finished-video-preview" ${isDone ? `data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}"` : ""}>
+      <div class="finished-video-preview" ${canPreview ? `data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}"` : ""}>
         ${jobId ? `<label class="finished-card-select"><input type="checkbox" data-finished-job-check="${escapeHtml(jobId)}" ${checked ? "checked" : ""} aria-label="选择成片"></label>` : ""}
-        ${isDone ? `<video src="${escapeHtml(cardPreviewUrl)}" muted playsinline preload="auto"></video><span class="finished-video-play">点击预览</span>` : `<div class="finished-video-empty">${escapeHtml(job.status === "failed" ? "生成失败" : "生成处理中")}</div>`}
-        <span class="finished-video-badge">${escapeHtml(isDone ? "已完成" : (job.status || "处理中"))}</span>
+        ${canPreview ? `<video src="${escapeHtml(cardPreviewUrl)}" muted playsinline preload="auto"></video><span class="finished-video-play">点击预览</span>` : `<div class="finished-video-empty">${escapeHtml(storageIssue ? "成片待安全保存" : (job.status === "failed" ? "生成失败" : "生成处理中"))}</div>`}
+        <span class="finished-video-badge">${escapeHtml(canPreview ? "已完成" : (storageIssue ? "存储待修复" : (job.status || "处理中")))}</span>
       </div>
       <div class="finished-video-body">
         <h3>${escapeHtml(title)}</h3>
@@ -3388,7 +3397,7 @@ function renderLatestExport() {
         <div class="meta">剪辑服务：${escapeHtml(job.provider || "自动剪辑")}</div>
         ${job.error ? `<div class="meta">错误：${escapeHtml(job.error)}</div>` : ""}
         <div class="finished-video-actions">
-          ${isDone ? `<button type="button" data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}">预览</button><a href="${escapeHtml(url)}" download>下载</a>` : `<button type="button" disabled>等待</button><a aria-disabled="true">暂无</a>`}
+          ${canPreview ? `<button type="button" data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}">预览</button><a href="${escapeHtml(url)}" download>下载</a>` : (storageIssue ? `<button type="button" data-migrate-finished-output>修复存储</button><a aria-disabled="true">待修复</a>` : `<button type="button" disabled>等待</button><a aria-disabled="true">暂无</a>`)}
           ${jobId ? `<button type="button" class="danger" data-delete-finished-job="${escapeHtml(jobId)}">删除</button>` : `<button type="button" disabled>删除</button>`}
         </div>
       </div>
@@ -3470,6 +3479,27 @@ async function deleteFinishedJobs(jobIds) {
   await loadJobs();
   toast(`已删除 ${ids.length} 条成片`);
   scheduleWorkspaceDraftSave();
+}
+
+async function migrateLegacyOutputs() {
+  const button = $("migrateLegacyOutputsBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "正在修复...";
+  }
+  try {
+    const data = await api("/api/jobs/migrate-outputs", {
+      method: "POST",
+      body: JSON.stringify({ limit: 20 }),
+    });
+    await loadJobs();
+    toast(data.migrated ? `已修复 ${data.migrated} 条旧成片` : "没有需要修复的旧成片");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "修复旧成片";
+    }
+  }
 }
 
 function openFinishedPreview(url, title = "成片预览") {
@@ -3594,6 +3624,7 @@ function bindActions() {
     toast(message);
   }));
   $("videoBtn").addEventListener("click", () => generateVideo().catch((e) => toast(e.message)));
+  $("migrateLegacyOutputsBtn")?.addEventListener("click", () => migrateLegacyOutputs().catch((e) => toast(e.message)));
   $("oneClickEditBtn")?.addEventListener("click", () => oneClickEditVideo().catch((e) => toast(e.message)));
   $("selectAllFinishedJobs")?.addEventListener("change", (event) => toggleAllFinishedJobs(event.target.checked));
   $("deleteFinishedSelectedBtn")?.addEventListener("click", () => deleteFinishedJobs([...state.selectedFinishedJobIds]).catch((e) => toast(e.message)));
@@ -3625,6 +3656,11 @@ function bindActions() {
     const deleteFinishedBtn = event.target.closest("[data-delete-finished-job]");
     if (deleteFinishedBtn) {
       deleteFinishedJobs([deleteFinishedBtn.dataset.deleteFinishedJob]).catch((e) => toast(e.message));
+      return;
+    }
+    const migrateFinishedBtn = event.target.closest("[data-migrate-finished-output]");
+    if (migrateFinishedBtn) {
+      migrateLegacyOutputs().catch((e) => toast(e.message));
       return;
     }
     if (event.target.closest("[data-close-asset-modal]")) {
