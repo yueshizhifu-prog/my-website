@@ -31,7 +31,6 @@ const staticPreviewMode = location.hostname.endsWith(".github.io") && !configure
 const staticPreviewMessage = "当前是 GitHub Pages 静态预览版，只能进入页面预览；登录、上传、AI 生成、配音和剪视频需要连接后端服务。";
 const staticAccountStorageKey = "aivf_static_accounts";
 const staticDefaultAccounts = [
-  { id: "admin", username: "admin", phone: "", password: "admin123", role: "admin", quotaDaily: 100, clipQuota: 100, clipsUsed: 0, expiresAt: "", disabled: false, createdAt: "2026-07-27T00:00:00.000Z" },
   { id: "client01", username: "client01", phone: "", password: "client123", role: "customer", quotaDaily: 20, clipQuota: 20, clipsUsed: 0, expiresAt: "", disabled: false, createdAt: "2026-07-27T00:00:00.000Z" },
 ];
 
@@ -260,6 +259,7 @@ const apiErrorMessages = {
   render_worker_unreachable: "剪辑服务暂时无法连接，请稍后再试。",
   render_worker_invalid_response: "剪辑服务返回异常，请稍后再试。",
   render_worker_failed: "剪辑服务处理失败，请稍后再试。",
+  render_worker_no_output: "剪辑服务没有返回有效成品，未保存任何伪成品，请稍后重试。",
   api_not_found: "服务接口暂不可用，请稍后刷新页面再试。",
   server_error: "服务处理失败，请稍后再试。",
   missing_tts_text: "请先填写需要配音的文案。",
@@ -276,6 +276,16 @@ const apiErrorMessages = {
   tts_output_not_found: "刚生成的配音文件不存在，请重新生成后再剪辑。",
   tts_output_fetch_failed: "配音文件保存到云端失败，请重新生成后再试。",
   tts_output_too_large: "配音文件过大，请缩短文案后再生成。",
+  text_model_not_configured: "文案大模型还没有配置，请联系管理员。",
+  text_model_unavailable: "文案大模型调用失败，请稍后再试。",
+  tts_provider_failed: "阿里云语音接口调用失败，请检查语音模型和音色配置后重试。",
+  tts_generation_failed: "逐镜头配音生成失败，不能进行剪辑，请稍后重试。",
+  voice_not_ready: "声音不存在或尚未克隆完成，请重新选择。",
+  invalid_tts_voice: "当前克隆声音在阿里云不可用，请删除后重新克隆。",
+  bailian_tts_audio_url_missing: "阿里云语音接口没有返回音频文件，请稍后再试。",
+  function_boot_failed: "云函数启动失败，请联系管理员重新部署。",
+  node_not_found: "本机剪辑环境缺少 Node.js，请联系管理员安装。",
+  renderer_not_found: "本机剪辑程序文件不完整，请联系管理员检查。",
 };
 
 function userFacingMessage(message, fallback = "操作未完成，请稍后再试。") {
@@ -317,12 +327,21 @@ async function api(path, options = {}) {
     throw new Error(`后端连接失败：请检查云函数/服务器是否已部署并可访问（${target}）`);
   }
   const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(`后端返回异常：接口没有返回 JSON，请检查云函数是否部署了正确 ZIP 包（${res.status}）`);
+  const responseText = await res.text();
+  let data = null;
+  if (responseText.trim()) {
+    try { data = JSON.parse(responseText); } catch {
+      throw new Error(`后端返回异常：接口没有返回有效 JSON，请检查云函数部署包（${res.status}）`);
+    }
   }
-  const data = await res.json();
+  if (!contentType.includes("application/json") && responseText.trim()) {
+    throw new Error(`后端返回异常：接口没有返回 JSON，请检查云函数部署包（${res.status}）`);
+  }
+  if (!data) {
+    throw new Error(res.ok ? "后端返回为空，请稍后再试。" : `服务处理失败（${res.status}），请稍后再试。`);
+  }
   if (!res.ok || data.ok === false) {
-    throw new Error(userFacingMessage(data.error, `请求失败，请稍后再试。`));
+    throw new Error(userFacingMessage(data.error || data.message, `请求失败（${res.status}），请稍后再试。`));
   }
   return data;
 }
@@ -2271,7 +2290,7 @@ function buildShotLibraryOptions(selected = "ungrouped") {
 function getAssetMatchLabel(libraryId, materialType) {
   const assets = getAssetsByGroup(libraryId);
   const libraryName = getAssetGroupName(libraryId);
-  if (!assets.length) return `「${libraryName}」暂无素材，生成时会使用占位混剪`;
+  if (!assets.length) return `「${libraryName}」暂无素材，生成前必须先上传对应视频`;
   const preferred = assets.filter((asset) => asset.type === materialType);
   if (preferred.length) {
     return `从「${libraryName}」匹配 ${preferred.length} 个${assetTypeLabels[materialType] || "素材"}：${preferred.slice(0, 2).map((a) => a.name).join("、")}`;
@@ -2356,13 +2375,18 @@ async function uploadAssetThroughOss(file, libraryId, button, duration = 0) {
     "Content-Type": file.type || "application/octet-stream",
     ...(sign.headers || {}),
   };
-  const uploadRes = await fetch(sign.uploadUrl, {
-    method: sign.method || "PUT",
-    headers: uploadHeaders,
-    body: file,
-  });
+  let uploadRes;
+  try {
+    uploadRes = await fetch(sign.uploadUrl, {
+      method: sign.method || "PUT",
+      headers: uploadHeaders,
+      body: file,
+    });
+  } catch {
+    throw new Error("素材上传到 OSS 失败，请检查网络和 OSS 跨域配置后重试。");
+  }
   if (!uploadRes.ok) {
-    throw new Error(`OSS 上传失败：${uploadRes.status}`);
+    throw new Error(`素材上传到 OSS 失败（${uploadRes.status}），请检查 OSS 跨域配置后重试。`);
   }
   const assetData = await api("/api/assets", {
     method: "POST",
@@ -2691,9 +2715,9 @@ function getVoiceCloneErrorMessage(error) {
     return `声音样本太长或文件太大，请上传 ${voiceSampleMaxSeconds} 秒以内的清晰人声小音频`;
   }
   if (/fetch failed|network|Failed to fetch/i.test(message)) {
-    return "声音克隆接口连接失败，请稍后再试";
+    return "声音克隆接口连接失败，请稍后再试。";
   }
-  return userFacingMessage(message, "声音克隆失败，请重新上传清晰声音样本");
+  return userFacingMessage(message, "声音克隆失败，请重新上传清晰声音样本。");
 }
 
 function getTtsErrorMessage(error) {
@@ -2701,11 +2725,11 @@ function getTtsErrorMessage(error) {
   if (/Invalid voice specified|requested voice code|voice code does not exist|not licensed for use|当前克隆声音在阿里云不可用/i.test(message)) {
     return "当前选择的克隆声音在阿里云不可用。请删除后用 45 秒以内清晰人声重新克隆，或者先切换为默认声音生成。";
   }
-  if (/missing_tts_text/i.test(message)) return "请先填写配音文案";
-  if (/bailian_api_key_missing|BAILIAN_API_KEY|DASHSCOPE_API_KEY/i.test(message)) return "阿里云语音 API 还没有配置好";
-  if (/url error|接口地址错误|tts_endpoint/i.test(message)) return "阿里云语音接口地址错误，正在修复，请稍后再试";
-  if (/fetch failed|network|Failed to fetch/i.test(message)) return "阿里云语音接口连接失败，请稍后再试";
-  return userFacingMessage(message, "配音生成失败，请稍后再试");
+  if (/missing_tts_text/i.test(message)) return "请先填写配音文案。";
+  if (/bailian_api_key_missing|BAILIAN_API_KEY|DASHSCOPE_API_KEY/i.test(message)) return "阿里云语音 API 还没有配置好。";
+  if (/url error|接口地址错误|tts_endpoint/i.test(message)) return "阿里云语音接口地址错误，请联系管理员检查配置。";
+  if (/fetch failed|network|Failed to fetch/i.test(message)) return "阿里云语音接口连接失败，请稍后再试。";
+  return userFacingMessage(message, "配音生成失败，请稍后再试。");
 }
 
 function getVideoGenerateErrorMessage(error) {
@@ -3289,20 +3313,10 @@ async function generateVideo() {
   try {
   const lipSyncMode = "off";
   const recommendedTitleStyle = getRecommendedTitleStyle();
-  setExportStatus("成片任务处理中：正在生成配音和自动剪辑...", "running");
+  setExportStatus("成片任务处理中：正在逐镜头生成同步配音和自动剪辑...", "running");
   const voiceId = requestedVoiceId;
   const voiceSpeed = getSelectedVoiceSpeed();
-  let assetIds = [...materialPlan.assetIds];
-  try {
-    const voiceAsset = await createVoiceoverAsset(voiceoverText, voiceId, voiceSpeed);
-    if (!voiceAsset?.id) throw new Error("voice_not_matched");
-    assetIds = Array.from(new Set([...assetIds, voiceAsset.id]));
-  } catch (error) {
-    const message = `没有匹配到可用声音，不能进行剪辑。${getTtsErrorMessage(error)}`;
-    setExportStatus(message, "error");
-    toast(message);
-    return false;
-  }
+  const assetIds = [...materialPlan.assetIds];
   setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
     title,
@@ -3313,6 +3327,7 @@ async function generateVideo() {
       ...shot,
       libraryId: materialPlan.matches[index]?.libraryId || shot.libraryId,
       assetId: materialPlan.matches[index]?.assetId || "",
+      voiceoverAssetId: "",
       voiceId: "",
     })),
     settings: {
@@ -3320,6 +3335,9 @@ async function generateVideo() {
       subtitleStyle: "玫红高亮字幕",
       titleStyle: recommendedTitleStyle,
       titleTemplateHint: getTitleTemplateHint(recommendedTitleStyle),
+      headline: title,
+      showHeadline: recommendedTitleStyle !== "不要标题",
+      segmentedVoiceover: true,
       bgmMode: getControlValue("editorBgmMode", "bgmMode", "智能推荐 BGM"),
       voiceSpeed,
       lipSyncMode,
