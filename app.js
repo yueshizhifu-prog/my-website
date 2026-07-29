@@ -263,6 +263,8 @@ const apiErrorMessages = {
   voice_clone_requires_sample_asset: "请先选择声音样本。",
   voice_sample_asset_not_found: "声音样本不存在，请重新选择。",
   voice_sample_url_missing: "声音样本无法读取，请重新上传。",
+  asset_data_invalid: "自动配音文件无效，请重新生成。",
+  asset_data_too_large: "自动配音文件过大，无法保存到云端。",
 };
 
 function userFacingMessage(message, fallback = "操作未完成，请稍后再试。") {
