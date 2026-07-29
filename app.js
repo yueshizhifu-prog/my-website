@@ -265,6 +265,9 @@ const apiErrorMessages = {
   voice_sample_url_missing: "声音样本无法读取，请重新上传。",
   asset_data_invalid: "自动配音文件无效，请重新生成。",
   asset_data_too_large: "自动配音文件过大，无法保存到云端。",
+  tts_output_not_found: "刚生成的配音文件不存在，请重新生成后再剪辑。",
+  tts_output_fetch_failed: "配音文件保存到云端失败，请重新生成后再试。",
+  tts_output_too_large: "配音文件过大，请缩短文案后再生成。",
 };
 
 function userFacingMessage(message, fallback = "操作未完成，请稍后再试。") {
@@ -3233,12 +3236,9 @@ async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
     body: JSON.stringify({ text, voiceId, voiceSpeed }),
   });
   const outputUrl = ttsData?.job?.outputUrl;
-  if (!outputUrl) return null;
+  const sourceJobId = ttsData?.job?.id;
+  if (!outputUrl || !sourceJobId) return null;
   setExportStatus("配音已生成，正在加入剪辑...", "running");
-  const response = await fetch(outputUrl);
-  if (!response.ok) throw new Error("配音文件读取失败");
-  const blob = await response.blob();
-  const dataUrl = await blobToDataUrl(blob);
   const ext = (outputUrl.match(/\.(mp3|wav|m4a|aac)(?:$|\?)/i)?.[1] || "mp3").toLowerCase();
   const assetData = await api("/api/assets", {
     method: "POST",
@@ -3246,7 +3246,7 @@ async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
       name: `自动配音-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`,
       type: "voiceover",
       libraryId: "ungrouped",
-      dataUrl,
+      sourceJobId,
     }),
   });
   await loadAssets();
