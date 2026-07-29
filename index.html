@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-no-speed-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260729-content-flow-v1" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -280,7 +280,7 @@
               </div>
             </div>
             <label>选题方向</label>
-            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会先给出 3-5 个选题方向，以及为什么这些选题适合这个档案和所选系列。"></textarea>
+            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会给出 3 个选题，每个选题都有独立且完全对应的文案和分镜。"></textarea>
             <input id="resultTitle" type="hidden" />
             <input id="resultTags" type="hidden" />
             <div class="button-row">
@@ -307,8 +307,8 @@
             </div>
             <label>文案内容</label>
             <textarea id="resultScript" rows="10" placeholder="这里会生成可直接拍摄的短视频文案"></textarea>
-            <label>分镜 / 拍摄清单</label>
-            <textarea id="resultPrompts" rows="12" placeholder="生成后会显示每个镜头：文案、画面、需要什么素材"></textarea>
+            <label>分镜拍摄清单</label>
+            <textarea id="resultPrompts" rows="12" placeholder="生成后会显示每个镜头：完整口播、在哪里拍、拍什么、需要什么素材"></textarea>
             <div class="button-row">
               <button id="splitShotBtn" class="secondary">导入剪辑镜头</button>
             </div>
@@ -695,6 +695,6 @@
 
   <div id="toast" class="toast hidden"></div>
   <script src="config.js?v=20260728-secure-output"></script>
-  <script src="app.js?v=20260729-no-speed-v1"></script>
+  <script src="app.js?v=20260729-content-flow-v1"></script>
 </body>
 </html>
