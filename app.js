@@ -3235,22 +3235,11 @@ async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
     method: "POST",
     body: JSON.stringify({ text, voiceId, voiceSpeed }),
   });
-  const outputUrl = ttsData?.job?.outputUrl;
-  const sourceJobId = ttsData?.job?.id;
-  if (!outputUrl || !sourceJobId) return null;
+  const voiceAsset = ttsData?.job?.asset;
+  if (!voiceAsset?.id) return null;
   setExportStatus("配音已生成，正在加入剪辑...", "running");
-  const ext = (outputUrl.match(/\.(mp3|wav|m4a|aac)(?:$|\?)/i)?.[1] || "mp3").toLowerCase();
-  const assetData = await api("/api/assets", {
-    method: "POST",
-    body: JSON.stringify({
-      name: `自动配音-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`,
-      type: "voiceover",
-      libraryId: "ungrouped",
-      sourceJobId,
-    }),
-  });
   await loadAssets();
-  return assetData.asset || null;
+  return voiceAsset;
 }
 
 async function generateVideo() {
