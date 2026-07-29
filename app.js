@@ -233,9 +233,43 @@ function normalizeList(value) {
 
 function toast(message) {
   const el = $("toast");
-  el.textContent = message;
+  el.textContent = userFacingMessage(message);
   el.classList.remove("hidden");
   setTimeout(() => el.classList.add("hidden"), 2600);
+}
+
+const apiErrorMessages = {
+  invalid_username_or_password: "账号或密码不正确，请重新输入。",
+  unauthorized_or_expired: "登录已失效，请重新登录。",
+  account_disabled: "该账号已暂停使用，请联系管理员。",
+  account_expired: "该账号已超过有效期，请联系管理员。",
+  admin_required: "当前账号没有管理员权限。",
+  account_username_or_phone_exists: "账号名或手机号已存在，请更换后再试。",
+  missing_password_for_new_account: "新建账号时请填写登录密码。",
+  cannot_delete_current_account: "不能删除当前登录的管理员账号。",
+  cannot_delete_last_admin: "至少需要保留一个可用管理员账号。",
+  account_not_found: "账号不存在或已被删除。",
+  clip_quota_exhausted: "当前账号的剪辑条数已用完，请联系管理员续费或增加额度。",
+  output_storage_failed: "成片已生成，但保存到云端失败，本次不会扣除剪辑条数，请稍后重试。",
+  render_worker_unreachable: "剪辑服务暂时无法连接，请稍后再试。",
+  api_not_found: "服务接口暂不可用，请稍后刷新页面再试。",
+  server_error: "服务处理失败，请稍后再试。",
+  missing_tts_text: "请先填写需要配音的文案。",
+  missing_account_id: "缺少账号信息，请刷新页面后再试。",
+};
+
+function userFacingMessage(message, fallback = "操作未完成，请稍后再试。") {
+  const raw = String(message || "").trim();
+  if (!raw) return fallback;
+  if (apiErrorMessages[raw]) return apiErrorMessages[raw];
+  if (/^missing_required_dossier_fields:/i.test(raw)) return "请先补全门店调研信息后再生成。";
+  if (/^missing_/i.test(raw)) return "请先补全必填内容后再试。";
+  if (/^output_fetch_failed|^output_too_large|^oss_(get|put|post|delete)_failed/i.test(raw)) return "云端文件处理失败，请稍后再试。";
+  if (/fetch failed|failed to fetch|network|timeout|econn|socket/i.test(raw)) return "网络连接失败，请检查网络后再试。";
+  if (/invalid voice|voice code does not exist|not licensed for use/i.test(raw)) return "当前选择的声音不可用，请切换默认声音或重新克隆。";
+  if (/ffmpeg|editly|custom image|not implemented/i.test(raw)) return "剪辑服务暂不可用，请稍后再试。";
+  if (/[\u4e00-\u9fff]/.test(raw)) return raw;
+  return fallback;
 }
 
 function safeJsonBody(body) {
@@ -267,7 +301,7 @@ async function api(path, options = {}) {
   }
   const data = await res.json();
   if (!res.ok || data.ok === false) {
-    throw new Error(data.error || `请求失败：${res.status}`);
+    throw new Error(userFacingMessage(data.error, `请求失败，请稍后再试。`));
   }
   return data;
 }
@@ -584,7 +618,7 @@ function clearCurrentWorkspaceDraft() {
 function setExportStatus(message, status = "idle") {
   const el = $("exportStatus");
   if (!el) return;
-  el.textContent = message;
+  el.textContent = userFacingMessage(message);
   el.classList.remove("is-idle", "is-running", "is-done", "is-error");
   el.classList.add(`is-${status}`);
 }
@@ -859,7 +893,7 @@ async function login() {
     showApp();
     await bootstrap();
   } catch (err) {
-    $("loginError").textContent = err.message;
+    $("loginError").textContent = userFacingMessage(err?.message, "登录失败，请稍后再试。");
   }
 }
 
@@ -2633,7 +2667,7 @@ function getVoiceCloneErrorMessage(error) {
   if (/fetch failed|network|Failed to fetch/i.test(message)) {
     return "声音克隆接口连接失败，请稍后再试";
   }
-  return message || "声音克隆失败，请重新上传清晰声音样本";
+  return userFacingMessage(message, "声音克隆失败，请重新上传清晰声音样本");
 }
 
 function getTtsErrorMessage(error) {
@@ -2644,7 +2678,7 @@ function getTtsErrorMessage(error) {
   if (/missing_tts_text/i.test(message)) return "请先填写配音文案";
   if (/bailian_api_key_missing|BAILIAN_API_KEY|DASHSCOPE_API_KEY/i.test(message)) return "阿里云语音 API 还没有配置好";
   if (/fetch failed|network|Failed to fetch/i.test(message)) return "阿里云语音接口连接失败，请稍后再试";
-  return message || "配音生成失败，请稍后再试";
+  return userFacingMessage(message, "配音生成失败，请稍后再试");
 }
 
 function getVideoGenerateErrorMessage(error) {
@@ -2655,7 +2689,7 @@ function getVideoGenerateErrorMessage(error) {
   if (/FFmpeg|Editly|custom image|自定义镜像|任务服务器|501|not implemented/i.test(message)) {
     return "成片剪辑服务还没部署，当前公开版已支持登录、文案、素材上传和配音；要一键生成成片，还需要先部署剪辑服务器。";
   }
-  return message || "成片生成失败，请稍后再试";
+  return userFacingMessage(message, "成片生成失败，请稍后再试");
 }
 
 async function createVoice() {
@@ -3395,7 +3429,7 @@ function renderLatestExport() {
         <h3>${escapeHtml(title)}</h3>
         <div class="meta">生成时间：${escapeHtml(job.createdAt || "-")}</div>
         <div class="meta">剪辑服务：${escapeHtml(job.provider || "自动剪辑")}</div>
-        ${job.error ? `<div class="meta">错误：${escapeHtml(job.error)}</div>` : ""}
+        ${job.error ? `<div class="meta">错误：${escapeHtml(userFacingMessage(job.error, "成片生成失败，请稍后再试。"))}</div>` : ""}
         <div class="finished-video-actions">
           ${canPreview ? `<button type="button" data-finished-preview-url="${escapeHtml(url)}" data-finished-preview-title="${escapeHtml(title)}">预览</button><a href="${escapeHtml(url)}" download>下载</a>` : (storageIssue ? `<button type="button" data-migrate-finished-output>修复存储</button><a aria-disabled="true">待修复</a>` : `<button type="button" disabled>等待</button><a aria-disabled="true">暂无</a>`)}
           ${jobId ? `<button type="button" class="danger" data-delete-finished-job="${escapeHtml(jobId)}">删除</button>` : `<button type="button" disabled>删除</button>`}
