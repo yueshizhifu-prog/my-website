@@ -256,6 +256,13 @@ const apiErrorMessages = {
   server_error: "服务处理失败，请稍后再试。",
   missing_tts_text: "请先填写需要配音的文案。",
   missing_account_id: "缺少账号信息，请刷新页面后再试。",
+  material_library_not_matched: "没有匹配到对应素材库视频，不能进行剪辑。请先上传视频素材或重新选择镜头视频库。",
+  voice_not_matched: "没有匹配到可用声音，不能进行剪辑。请先选择克隆成功的声音。",
+  voice_clone_failed: "声音克隆失败，未保存到声音列表。请更换清晰声音样本后重试。",
+  voice_clone_requires_consent: "请确认已获得声音所有者授权后再克隆。",
+  voice_clone_requires_sample_asset: "请先选择声音样本。",
+  voice_sample_asset_not_found: "声音样本不存在，请重新选择。",
+  voice_sample_url_missing: "声音样本无法读取，请重新上传。",
 };
 
 function userFacingMessage(message, fallback = "操作未完成，请稍后再试。") {
@@ -3009,13 +3016,14 @@ function renderEditorMaterialNotice() {
   ensureShots();
   const assets = normalizeList(state.assets);
   const voices = normalizeList(state.voices);
-  const assetsByLibrary = groupAssetsByLibrary(assets);
+  const visualAssets = assets.filter(isVisualLibraryAsset);
+  const assetsByLibrary = groupAssetsByLibrary(visualAssets);
   const requiredLibraryIds = Array.from(new Set(state.shots.map((shot) => resolveShotLibraryId(shot.libraryId, shot)).filter(Boolean)));
-  const missingLibraryIds = assets.length
+  const missingLibraryIds = visualAssets.length
     ? requiredLibraryIds.filter((id) => !(assetsByLibrary[id] || []).length)
     : requiredLibraryIds;
   const missing = [];
-  if (!assets.length) {
+  if (!visualAssets.length) {
     missing.push("还没有上传任何视频素材");
   } else if (missingLibraryIds.length) {
     const labels = missingLibraryIds.slice(0, 4).map((id) => getAssetGroupName(id)).join("、");
@@ -3050,6 +3058,34 @@ function groupAssetsByLibrary(assets) {
     acc[id].push(item);
     return acc;
   }, {});
+}
+
+function isVisualLibraryAsset(asset = {}) {
+  const type = String(asset.type || "").toLowerCase();
+  if (["voice_sample", "voiceover", "bgm", "audio"].includes(type)) return false;
+  const source = `${asset.name || ""} ${asset.objectKey || ""} ${asset.url || ""}`.toLowerCase();
+  return /\.(mp4|mov|m4v|webm|avi|mkv|jpg|jpeg|png|webp)(?:$|\?)/.test(source)
+    || ["video", "talking_head", "process", "feedback", "product", "store", "image"].includes(type);
+}
+
+function buildMaterialMatchPlan(shots = buildRenderShots()) {
+  const selectedIds = new Set(normalizeList(state.selectedLibraryAssetIds));
+  const visualAssets = normalizeList(state.assets).filter(isVisualLibraryAsset);
+  const matches = normalizeList(shots).map((shot, index) => {
+    const libraryId = resolveShotLibraryId(shot.libraryId, shot);
+    const libraryAssets = visualAssets.filter((asset) => getAssetLibraryId(asset) === libraryId);
+    const selectedInLibrary = libraryAssets.filter((asset) => selectedIds.has(asset.id));
+    const candidates = selectedInLibrary.length ? selectedInLibrary : libraryAssets;
+    const typedCandidates = candidates.filter((asset) => String(asset.type || "") === String(shot.materialType || ""));
+    const pool = typedCandidates.length ? typedCandidates : candidates;
+    const asset = pool.length ? pool[index % pool.length] : null;
+    return { index, libraryId, assetId: asset?.id || "", assetName: asset?.name || "" };
+  });
+  return {
+    matches,
+    missing: matches.filter((item) => !item.assetId),
+    assetIds: Array.from(new Set(matches.map((item) => item.assetId).filter(Boolean))),
+  };
 }
 
 function renderCockpit() {
@@ -3230,6 +3266,23 @@ async function generateVideo() {
     toast("先生成或填写视频脚本");
     return false;
   }
+  await Promise.all([loadAssets(), loadVoices()]);
+  const materialPlan = buildMaterialMatchPlan(renderShots);
+  if (materialPlan.missing.length) {
+    const groups = Array.from(new Set(materialPlan.missing.map((item) => getAssetGroupName(item.libraryId)))).join("、");
+    const message = `没有匹配到 ${groups || "对应"} 素材库视频，不能进行剪辑。请先上传对应视频素材或重新选择镜头视频库。`;
+    setExportStatus(message, "error");
+    toast(message);
+    return false;
+  }
+  const requestedVoiceId = getSelectedVoiceId();
+  const selectedVoice = normalizeList(state.voices).find((voice) => voice.id === requestedVoiceId && voice.status === "ready" && voice.providerVoiceId);
+  if (!selectedVoice) {
+    const message = "没有匹配到可用声音，不能进行剪辑。请先选择克隆成功的声音。";
+    setExportStatus(message, "error");
+    toast(message);
+    return false;
+  }
   const videoButton = $("videoBtn");
   const previousVideoButtonText = videoButton?.textContent || "";
   if (videoButton) {
@@ -3240,18 +3293,18 @@ async function generateVideo() {
   const lipSyncMode = "off";
   const recommendedTitleStyle = getRecommendedTitleStyle();
   setExportStatus("成片任务处理中：正在生成配音和自动剪辑...", "running");
-  const voiceId = getSelectedVoiceId();
+  const voiceId = requestedVoiceId;
   const voiceSpeed = getSelectedVoiceSpeed();
-  let assetIds = getRenderAssetIdsForShots();
-  if (voiceId) {
-    try {
-      const voiceAsset = await createVoiceoverAsset(voiceoverText, voiceId, voiceSpeed);
-      if (voiceAsset?.id) {
-        assetIds = Array.from(new Set([...assetIds, voiceAsset.id]));
-      }
-    } catch (error) {
-      toast(`配音生成失败，先生成无配音视频：${getTtsErrorMessage(error)}`);
-    }
+  let assetIds = [...materialPlan.assetIds];
+  try {
+    const voiceAsset = await createVoiceoverAsset(voiceoverText, voiceId, voiceSpeed);
+    if (!voiceAsset?.id) throw new Error("voice_not_matched");
+    assetIds = Array.from(new Set([...assetIds, voiceAsset.id]));
+  } catch (error) {
+    const message = `没有匹配到可用声音，不能进行剪辑。${getTtsErrorMessage(error)}`;
+    setExportStatus(message, "error");
+    toast(message);
+    return false;
   }
   setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
@@ -3259,7 +3312,12 @@ async function generateVideo() {
     script: voiceoverText,
     voiceId,
     assetIds,
-    shots: renderShots.map((shot) => ({ ...shot, voiceId: "" })),
+    shots: renderShots.map((shot, index) => ({
+      ...shot,
+      libraryId: materialPlan.matches[index]?.libraryId || shot.libraryId,
+      assetId: materialPlan.matches[index]?.assetId || "",
+      voiceId: "",
+    })),
     settings: {
       count: Number(getControlValue("renderCount", "", "1") || 1),
       subtitleStyle: "玫红高亮字幕",
@@ -3298,17 +3356,7 @@ async function generateVideo() {
 }
 
 function getRenderAssetIdsForShots() {
-  const libraryIds = new Set(state.shots.map((shot) => resolveShotLibraryId(shot.libraryId, shot)).filter(Boolean));
-  const selectedIds = new Set(normalizeList(state.selectedLibraryAssetIds));
-  const ids = normalizeList(state.assets)
-    .filter((asset) => {
-      const libraryMatch = libraryIds.has(getAssetLibraryId(asset));
-      const selectedMatch = selectedIds.has(asset.id);
-      const audioSupport = ["bgm", "voiceover"].includes(asset.type);
-      return libraryMatch || selectedMatch || audioSupport;
-    })
-    .map((asset) => asset.id);
-  return Array.from(new Set(ids));
+  return buildMaterialMatchPlan(buildRenderShots()).assetIds;
 }
 
 async function oneClickEditVideo() {
