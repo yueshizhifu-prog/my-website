@@ -2687,6 +2687,7 @@ function getTtsErrorMessage(error) {
   }
   if (/missing_tts_text/i.test(message)) return "请先填写配音文案";
   if (/bailian_api_key_missing|BAILIAN_API_KEY|DASHSCOPE_API_KEY/i.test(message)) return "阿里云语音 API 还没有配置好";
+  if (/url error|接口地址错误|tts_endpoint/i.test(message)) return "阿里云语音接口地址错误，正在修复，请稍后再试";
   if (/fetch failed|network|Failed to fetch/i.test(message)) return "阿里云语音接口连接失败，请稍后再试";
   return userFacingMessage(message, "配音生成失败，请稍后再试");
 }
