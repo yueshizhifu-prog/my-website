@@ -249,9 +249,17 @@ const apiErrorMessages = {
   cannot_delete_current_account: "不能删除当前登录的管理员账号。",
   cannot_delete_last_admin: "至少需要保留一个可用管理员账号。",
   account_not_found: "账号不存在或已被删除。",
+  missing_username: "请填写账号名。",
+  missing_asset_id: "请选择需要操作的素材。",
+  missing_group_name: "请填写视频库名称。",
+  asset_group_exists: "该视频库名称已存在，请换一个名称。",
+  asset_not_found: "素材不存在或已被删除，请刷新后重试。",
+  missing_job_ids: "请先选择需要删除的成片。",
   clip_quota_exhausted: "当前账号的剪辑条数已用完，请联系管理员续费或增加额度。",
   output_storage_failed: "成片已生成，但保存到云端失败，本次不会扣除剪辑条数，请稍后重试。",
   render_worker_unreachable: "剪辑服务暂时无法连接，请稍后再试。",
+  render_worker_invalid_response: "剪辑服务返回异常，请稍后再试。",
+  render_worker_failed: "剪辑服务处理失败，请稍后再试。",
   api_not_found: "服务接口暂不可用，请稍后刷新页面再试。",
   server_error: "服务处理失败，请稍后再试。",
   missing_tts_text: "请先填写需要配音的文案。",
@@ -277,6 +285,7 @@ function userFacingMessage(message, fallback = "操作未完成，请稍后再�
   if (/^missing_required_dossier_fields:/i.test(raw)) return "请先补全门店调研信息后再生成。";
   if (/^missing_/i.test(raw)) return "请先补全必填内容后再试。";
   if (/^output_fetch_failed|^output_too_large|^oss_(get|put|post|delete)_failed/i.test(raw)) return "云端文件处理失败，请稍后再试。";
+  if (/material_(url|download|segment)|ffmpeg_(concat|audio_merge)|payload_too_large/i.test(raw)) return "匹配素材或合成视频失败，请检查素材是否完整后重新剪辑。";
   if (/fetch failed|failed to fetch|network|timeout|econn|socket/i.test(raw)) return "网络连接失败，请检查网络后再试。";
   if (/invalid voice|voice code does not exist|not licensed for use/i.test(raw)) return "当前选择的声音不可用，请切换默认声音或重新克隆。";
   if (/ffmpeg|editly|custom image|not implemented/i.test(raw)) return "剪辑服务暂不可用，请稍后再试。";
@@ -2403,11 +2412,13 @@ function getAssetGroupName(groupId) {
 }
 
 function getUsedAssetBytes() {
-  return normalizeList(state.assets).reduce((sum, asset) => sum + (Number(asset.size) || 0), 0);
+  return normalizeList(state.assets)
+    .filter((asset) => !asset.internal)
+    .reduce((sum, asset) => sum + (Number(asset.size) || 0), 0);
 }
 
 function getAssetsByGroup(groupId) {
-  const assets = normalizeList(state.assets);
+  const assets = normalizeList(state.assets).filter((asset) => !asset.internal);
   if (groupId === "all") return assets;
   return assets.filter((asset) => getAssetLibraryId(asset) === groupId);
 }
@@ -2628,7 +2639,7 @@ async function uploadAsset() {
 async function loadAssets() {
   const data = await api("/api/assets");
   state.assets = normalizeList(data.assets);
-  if ($("assetCount")) $("assetCount").textContent = state.assets.length;
+  if ($("assetCount")) $("assetCount").textContent = state.assets.filter((asset) => !asset.internal).length;
   renderAssetLibrary();
   renderAssetOptions();
   if (state.shots.length) {
@@ -3217,15 +3228,6 @@ async function generateTts() {
   renderLatestExport();
   scheduleWorkspaceDraftSave();
   toast("配音任务完成");
-}
-
-function blobToDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("audio_read_failed"));
-    reader.readAsDataURL(blob);
-  });
 }
 
 async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
