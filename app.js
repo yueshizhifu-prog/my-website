@@ -69,7 +69,6 @@ const workspaceDraftFieldIds = [
   "resultScript",
   "resultPrompts",
   "ttsVoiceSelect",
-  "voiceSpeed",
   "renderCount",
   "subtitleStyle",
   "titleStyle",
@@ -78,7 +77,6 @@ const workspaceDraftFieldIds = [
   "videoTitle",
   "videoScript",
   "editorVoiceSelect",
-  "editorVoiceSpeed",
   "editorBgmMode",
   "voiceName",
 ];
@@ -2849,26 +2847,6 @@ function getSelectedVoiceId() {
   return getControlValue("editorVoiceSelect", "ttsVoiceSelect", "");
 }
 
-function normalizeVoiceSpeed(value) {
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed)) return 1;
-  return Math.min(1.5, Math.max(0.8, Math.round(parsed * 10) / 10));
-}
-
-function formatVoiceSpeed(value) {
-  return `${normalizeVoiceSpeed(value).toFixed(1)}x`;
-}
-
-function getSelectedVoiceSpeed() {
-  return normalizeVoiceSpeed(getControlValue("editorVoiceSpeed", "voiceSpeed", "1.0"));
-}
-
-function updateVoiceSpeedLabels() {
-  const speed = getSelectedVoiceSpeed();
-  if ($("editorVoiceSpeedValue")) $("editorVoiceSpeedValue").textContent = formatVoiceSpeed(speed);
-  if ($("voiceSpeedValue")) $("voiceSpeedValue").textContent = formatVoiceSpeed(speed);
-}
-
 function syncPairedSelects(primaryId, fallbackId) {
   const primary = $(primaryId);
   const fallback = $(fallbackId);
@@ -2884,24 +2862,6 @@ function syncPairedSelects(primaryId, fallbackId) {
     sync(fallback, primary);
     updateTitleTemplateHints();
   });
-}
-
-function syncPairedRanges(primaryId, fallbackId) {
-  const primary = $(primaryId);
-  const fallback = $(fallbackId);
-  if (!primary || !fallback) return;
-  const sync = (from, to) => {
-    const value = normalizeVoiceSpeed(from.value).toFixed(1);
-    if (from.value !== value) from.value = value;
-    if (to.value !== value) to.value = value;
-    updateVoiceSpeedLabels();
-    scheduleWorkspaceDraftSave();
-  };
-  ["input", "change"].forEach((eventName) => {
-    primary.addEventListener(eventName, () => sync(primary, fallback));
-    fallback.addEventListener(eventName, () => sync(fallback, primary));
-  });
-  sync(primary, fallback);
 }
 
 function getTitleTemplateHint(style) {
@@ -3244,7 +3204,6 @@ async function generateTts() {
     body: JSON.stringify({
       text,
       voiceId: getSelectedVoiceId(),
-      voiceSpeed: getSelectedVoiceSpeed(),
     }),
   });
   setExportStatus("配音已生成，可以继续生成成片", "done");
@@ -3254,12 +3213,12 @@ async function generateTts() {
   toast("配音任务完成");
 }
 
-async function createVoiceoverAsset(text, voiceId, voiceSpeed = 1) {
+async function createVoiceoverAsset(text, voiceId) {
   if (!text || !voiceId) return null;
   setExportStatus("克隆音色配音生成中...", "running");
   const ttsData = await api("/api/tts", {
     method: "POST",
-    body: JSON.stringify({ text, voiceId, voiceSpeed }),
+    body: JSON.stringify({ text, voiceId }),
   });
   const voiceAsset = ttsData?.job?.asset;
   if (!voiceAsset?.id) return null;
@@ -3315,7 +3274,6 @@ async function generateVideo() {
   const recommendedTitleStyle = getRecommendedTitleStyle();
   setExportStatus("成片任务处理中：正在逐镜头生成同步配音和自动剪辑...", "running");
   const voiceId = requestedVoiceId;
-  const voiceSpeed = getSelectedVoiceSpeed();
   const assetIds = [...materialPlan.assetIds];
   setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
@@ -3339,7 +3297,6 @@ async function generateVideo() {
       showHeadline: recommendedTitleStyle !== "不要标题",
       segmentedVoiceover: true,
       bgmMode: getControlValue("editorBgmMode", "bgmMode", "智能推荐 BGM"),
-      voiceSpeed,
       lipSyncMode,
     }
   };
@@ -3716,8 +3673,6 @@ function bindActions() {
   });
   syncPairedSelects("editorVoiceSelect", "ttsVoiceSelect");
   syncPairedSelects("editorBgmMode", "bgmMode");
-  syncPairedRanges("editorVoiceSpeed", "voiceSpeed");
-  updateVoiceSpeedLabels();
   updateTitleTemplateHints();
   $("uploadAssetBtn").addEventListener("click", () => uploadAsset().catch((e) => toast(e.message)));
   $("createAssetGroupBtn")?.addEventListener("click", () => createAssetGroup().catch((e) => toast(e.message)));
