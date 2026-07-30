@@ -1,700 +1,147 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-content-flow-v1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>玥时工具入口</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #2a0715;
+      --panel: #fff7fb;
+      --ink: #26131a;
+      --muted: #7a6570;
+      --line: rgba(106, 35, 66, .16);
+      --accent: #b72868;
+      --accent-dark: #64172f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(155deg, rgba(42, 7, 21, .92), rgba(183, 40, 104, .72)),
+        linear-gradient(180deg, #2a0715, #b72868);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(100%, 760px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: white;
+      font-size: clamp(28px, 6vw, 48px);
+      line-height: 1.05;
+      font-weight: 800;
+    }
+
+    .sub {
+      margin: 0 0 22px;
+      color: rgba(255, 255, 255, .78);
+      font-size: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    a {
+      display: block;
+      min-height: 156px;
+      padding: 22px;
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      text-decoration: none;
+      box-shadow: 0 18px 42px rgba(24, 6, 14, .26);
+      border: 1px solid var(--line);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    a:active {
+      transform: scale(.99);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(183, 40, 104, .1);
+      color: var(--accent-dark);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .go {
+      margin-top: 18px;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        align-items: flex-start;
+        padding: 22px 14px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      a {
+        min-height: 142px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div id="loginView" class="login-shell">
-    <div class="login-art">
-      <div class="login-card">
-        <div class="brand-mark">AI 视频工厂</div>
-        <h1>本地商家专属 · 视频生产驾驶舱</h1>
-        <p>从门店定位、脚本、镜头素材到成片导出，一步步把短视频做出来。</p>
-        <div class="login-role-note" id="loginRoleNote">输入手机号或账号，系统会自动识别管理员和客户权限。</div>
-        <label>手机号 / 账号</label>
-        <input id="loginUsername" autocomplete="off" placeholder="请输入手机号或账号" />
-        <label>密码</label>
-        <input id="loginPassword" type="password" autocomplete="off" placeholder="请输入密码" />
-        <button id="loginBtn" class="primary full">进入工作台</button>
-        <div id="loginError" class="error"></div>
-        <div class="hint">登录后自动识别身份；客户只进入日常剪辑流程，管理员可进入账号设置。</div>
-      </div>
+  <main>
+    <h1>玥时工具入口</h1>
+    <p class="sub">内部工具已分开放置，避免好评助手和 AI 剪视频互相覆盖。</p>
+    <div class="grid">
+      <a href="./review-helper/">
+        <span class="tag">门店好评</span>
+        <h2>好评助手</h2>
+        <p>选择体验项目，生成更自然真实的美团/点评好评文案。</p>
+        <div class="go">打开好评助手</div>
+      </a>
+      <a href="./ai-video/">
+        <span class="tag">短视频</span>
+        <h2>AI 剪视频</h2>
+        <p>调研定位、脚本分镜、素材管理、配音和一键剪辑流程。</p>
+        <div class="go">打开 AI 剪视频</div>
+      </a>
     </div>
-  </div>
-
-  <div id="appView" class="app hidden">
-    <aside class="sidebar" id="sidebar">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="收起侧边栏" aria-expanded="true">‹</button>
-      <div class="brand-block">
-        <div class="logo">AI 视频工厂</div>
-        <div class="sub">本地商家专属 · 视频生产驾驶舱</div>
-      </div>
-
-      <nav class="side-flow">
-        <div class="nav nav-combo active" data-tabs="researchTab libraryTab" title="调研与视频库">
-          <span class="step-dot">1</span>
-          <span class="nav-copy">
-            <strong>调研</strong>
-            <em>档案与素材准备</em>
-          </span>
-          <i class="step-check">✓</i>
-          <span class="nav-segments" role="group" aria-label="调研阶段入口">
-            <button class="nav-segment active" data-tab="researchTab" type="button">
-              <b>调研档案</b>
-            </button>
-            <button class="nav-segment" data-tab="libraryTab" type="button">
-              <b>视频库</b>
-            </button>
-          </span>
-        </div>
-        <button class="nav" data-tab="scriptTab" title="脚本生成">
-          <span class="step-dot">2</span>
-          <span class="nav-copy"><strong>脚本</strong><em>文案与分镜</em></span>
-        </button>
-        <button class="nav" data-tab="editorTab" title="剪辑">
-          <span class="step-dot">3</span>
-          <span class="nav-copy"><strong>剪辑</strong><em>镜头匹配混剪</em></span>
-        </button>
-        <button class="nav" data-tab="exportTab" title="成品库存">
-          <span class="step-dot">4</span>
-          <span class="nav-copy"><strong>成品库存</strong><em>预览与下载成片</em></span>
-        </button>
-        <button class="nav account-nav" data-tab="accountTab" title="账号设置">
-          <span class="step-dot">账</span>
-          <span class="nav-copy"><strong>账号设置</strong><em>手机号、密码、有效期</em></span>
-        </button>
-      </nav>
-
-      <div class="store-card">
-        <div class="store-icon">店</div>
-        <div class="store-copy">
-          <strong>美容美容门店</strong>
-          <span id="accountName">-</span>
-        </div>
-      </div>
-      <div class="today">2026-07-18 星期六</div>
-      <button id="logoutBtn" class="ghost small">退出</button>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">当前工作台</p>
-          <h2 id="workspaceTitle">调研档案</h2>
-          <p id="workspaceSubtitle" class="workspace-subtitle">先让系统理解你是谁、店铺情况和当前卡点。</p>
-        </div>
-        <button id="topExportBtn" class="outline-cta hidden">成品库存</button>
-      </header>
-
-      <section id="researchTab" class="tab active">
-        <section class="dossier-grid">
-          <div class="panel dossier-panel">
-            <div class="panel-head">
-              <span class="num">调</span>
-              <div>
-                <h2>生意档案 / 个人档案</h2>
-                <p>这一栏只让系统更了解这个人和门店，不生成脚本、不拆分镜、不处理素材。</p>
-              </div>
-            </div>
-            <div class="dossier-section-title">门店基本信息</div>
-            <div class="form-row single-first">
-              <div>
-                <label>DeepSeek 模型</label>
-                <select id="modelMode">
-                  <option value="fast">快速版：快速建立用户画像</option>
-                  <option value="thinking">思考版：深度分析人设、卡点和表达方向</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>您的行业是什么？</label>
-                <input id="storeIndustry" required placeholder="例如：餐饮、美容、养生、美甲美睫、酒旅" />
-              </div>
-              <div>
-                <label>您的店名/品牌名是？</label>
-                <input id="brandName" required placeholder="例如：牛叁佬化州香油鸡" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>门店所在的城市是？</label>
-                <input id="storeCity" required placeholder="例如：广州、佛山、深圳" />
-              </div>
-              <div>
-                <label>您门店的位置简单描述：</label>
-                <input id="storeLocation" required placeholder="例如：天河区某商场附近、社区底商、写字楼楼下" />
-              </div>
-            </div>
-            <div class="dossier-section-title">人设基本信息</div>
-            <div class="form-row">
-              <div>
-                <label>短视频中您的自我称呼是？</label>
-                <input id="personaName" required placeholder="例如：牛叁佬东哥、皮肤管理小敏、老板娘阿芳" />
-              </div>
-              <div>
-                <label>您的年龄是？</label>
-                <input id="personaAge" required placeholder="例如：35" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>您的性别是？</label>
-                <select id="personaGender" required>
-                  <option value="">请选择</option>
-                  <option>男士</option>
-                  <option>女士</option>
-                  <option>不强调性别</option>
-                </select>
-              </div>
-              <div>
-                <label>您这行业/门店做了多少年？</label>
-                <input id="businessYears" required placeholder="例如：6 年、10 年、刚开业 3 个月" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>您自己是哪里人？</label>
-                <input id="hometown" required placeholder="例如：化州本地人、潮汕人、湖南人" />
-              </div>
-              <div>
-                <label>您希望主推的产品/套餐是？<span class="optional">选填</span></label>
-                <textarea id="mainProduct" rows="3" placeholder="例如：招牌套餐、团购套餐、主推服务项目、客单价区间"></textarea>
-              </div>
-            </div>
-            <div class="form-row">
-              <div>
-                <label>您的产品/服务优势？<span class="optional">选填</span></label>
-                <textarea id="serviceAdvantage" rows="4" placeholder="例如：本地老店、老板亲自服务、食材新鲜、案例真实、流程标准"></textarea>
-              </div>
-              <div>
-                <label>有没有其他想补充的？<span class="optional">选填</span></label>
-                <textarea id="extraInfo" rows="4" placeholder="例如：想强调的故事、客群、门店福利、不能说的内容、风格偏好"></textarea>
-              </div>
-            </div>
-            <button id="researchBtn" class="primary">生成个人调研定位</button>
-            <div id="researchLoading" class="loading-line hidden"><span class="spinner"></span><span id="researchLoadingText">正在生成调研定位...</span></div>
-          </div>
-          <aside class="panel dossier-result-panel">
-            <div class="panel-head">
-              <span class="num">档</span>
-              <div>
-                <h2>AI 调研结果</h2>
-                <p>生成后会沉淀为后续脚本、视频库和剪辑的基础档案。</p>
-              </div>
-            </div>
-            <div id="modelBadge" class="model-badge">等待调研</div>
-            <div id="researchProgress" class="generation-progress hidden" aria-live="polite">
-              <div class="progress-head">
-                <span id="researchProgressStep">正在读取门店档案</span>
-                <strong id="researchProgressPercent">0%</strong>
-              </div>
-              <div class="progress-track"><div id="researchProgressBar" class="progress-bar"></div></div>
-              <div id="researchProgressSteps" class="progress-steps"></div>
-            </div>
-            <label>个人调研结果</label>
-            <textarea id="resultStrategy" rows="18" placeholder="生成后会显示：用户画像、表达优势、信任背书、内容禁区、适合的表达方式"></textarea>
-            <button id="toScriptBtn" class="secondary">导入调研档案库</button>
-          </aside>
-        </section>
-      </section>
-
-      <section id="scriptTab" class="tab">
-        <div class="workspace-grid script-workspace">
-          <div class="panel script-config-panel">
-            <div class="panel-head">
-              <span class="num">2</span>
-              <div>
-                <h2>脚本生成</h2>
-                <p>先导入调研档案，再选择要出的系列，DeepSeek 会结合档案和内容逻辑生成选题、文案和分镜。</p>
-              </div>
-            </div>
-            <div class="dossier-mini">
-              <button id="importDossierBtn" class="secondary">导入调研档案库</button>
-              <div>
-                <strong id="scriptDossierState">未导入档案</strong>
-                <span>导入后系统会带着档案生成，客户不用看全文。</span>
-              </div>
-            </div>
-            <textarea id="scriptDossier" class="hidden" readonly></textarea>
-            <div class="form-row">
-              <div>
-                <label>DeepSeek 文案模型</label>
-                <select id="scriptModelMode">
-                  <option value="fast">快速版：更快生成一版可用文案</option>
-                  <option value="thinking">思考版：深度思考人群、人性点和破圈选题</option>
-                </select>
-              </div>
-              <div>
-                <label>选择要出的系列</label>
-                <select id="templateSelect"></select>
-              </div>
-            </div>
-            <label>爆款标题模板</label>
-            <select id="scriptTitleStyle">
-              <option>智能推荐样式</option>
-              <option>痛点钩子标题</option>
-              <option>反差悬念标题</option>
-              <option>数字清单标题</option>
-              <option>同城场景标题</option>
-              <option>避坑提醒标题</option>
-              <option>结果承诺标题</option>
-              <option>真实测评标题</option>
-              <option>团购成交标题</option>
-            </select>
-            <p id="scriptTitleTemplateHint" class="field-hint title-template-hint"></p>
-            <div class="template-tabs" id="templateTabs"></div>
-            <div id="templatePreview" class="template-preview"></div>
-            <div id="localTargetPanel" class="conditional-panel hidden">
-              <h3>同城人群选择 <span class="optional">必选</span></h3>
-              <p class="muted compact-hint">可多选，年龄自动匹配。</p>
-              <div class="form-row">
-                <div>
-                  <label>抖音八大人群维度</label>
-                  <input id="localAudienceSegment" type="hidden" />
-                  <div id="localAudienceSelect" class="multi-select">
-                    <button id="localAudienceToggle" class="multi-select-toggle" type="button" aria-expanded="false">
-                      <span id="localAudienceSummary">请选择人群</span>
-                      <i>⌄</i>
-                    </button>
-                    <div id="localAudienceSegmentGroup" class="multi-choice-grid multi-select-menu hidden">
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="人群不限" />人群不限</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="Z 世代" />Z 世代</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="新锐白领" />新锐白领</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="精致妈妈" />精致妈妈</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="资深中产" />资深中产</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市蓝领" />都市蓝领</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇青年" />小镇青年</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="小镇中老年" />小镇中老年</label>
-                      <label class="choice-chip"><input type="checkbox" name="localAudienceSegmentOption" value="都市银发" />都市银发</label>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label>年龄范围</label>
-                  <input id="localAgeRange" readonly placeholder="自动匹配" />
-                </div>
-              </div>
-            </div>
-            <label>选题方向</label>
-            <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会给出 3 个选题，每个选题都有独立且完全对应的文案和分镜。"></textarea>
-            <input id="resultTitle" type="hidden" />
-            <input id="resultTags" type="hidden" />
-            <div class="button-row">
-              <button id="scriptBtn" class="primary">用 DeepSeek 生成文案 + 分镜</button>
-            </div>
-            <div id="scriptLoading" class="loading-line hidden"><span class="spinner"></span><span id="scriptLoadingText">正在生成脚本文案...</span></div>
-          </div>
-          <div class="panel script-output-panel">
-            <div class="panel-head">
-              <span class="num">镜</span>
-              <div>
-                <h2>文案和分镜</h2>
-                <p>右侧只放生成后的可执行内容，方便复制、调整和导入剪辑。</p>
-              </div>
-              <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="选用选题"></div>
-            </div>
-            <div id="scriptProgressPanel" class="generation-progress hidden" aria-live="polite">
-              <div class="progress-head">
-                <span id="scriptProgressStep">正在整理调研档案</span>
-                <strong id="scriptProgressPercent">0%</strong>
-              </div>
-              <div class="progress-track"><div id="scriptProgressBar" class="progress-bar"></div></div>
-              <div id="scriptProgressSteps" class="progress-steps"></div>
-            </div>
-            <label>文案内容</label>
-            <textarea id="resultScript" rows="10" placeholder="这里会生成可直接拍摄的短视频文案"></textarea>
-            <label>分镜拍摄清单</label>
-            <textarea id="resultPrompts" rows="12" placeholder="生成后会显示每个镜头：完整口播、在哪里拍、拍什么、需要什么素材"></textarea>
-            <div class="button-row">
-              <button id="splitShotBtn" class="secondary">导入剪辑镜头</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="libraryTab" class="tab">
-        <div class="library-shell">
-          <div class="library-top-card">
-            <div class="panel-head">
-              <span class="num">库</span>
-              <div>
-                <h2>视频库</h2>
-                <p>素材按视频库分组管理；声音克隆单独管理，后续剪辑按镜头调用。</p>
-              </div>
-              <button id="createAssetGroupBtn" class="primary panel-head-action" type="button">＋ 新增视频库</button>
-            </div>
-            <div class="quota-strip">
-              <div>
-                <strong>素材库容量</strong>
-                <span id="assetQuotaText">0GB / 5GB</span>
-              </div>
-              <div class="quota-bar"><i id="assetQuotaBar"></i></div>
-              <em id="assetQuotaHint">内部体验版先限制 5GB，后续对外版可按账号扩容。</em>
-            </div>
-          </div>
-
-          <div class="library-two-columns">
-            <div class="panel asset-library-panel">
-              <div class="section-title compact-title">
-                <span class="mini-icon">素</span>
-                <div>
-                  <h2>素材库</h2>
-                  <p>客户自己创建视频库；点击任意视频库即可上传、选择和删除素材。</p>
-                </div>
-              </div>
-              <div id="assetGroupGrid" class="asset-group-grid"></div>
-            </div>
-
-            <aside class="panel voice-clone-panel">
-              <div class="section-title compact-title">
-                <span class="mini-icon">声</span>
-                <div>
-                  <h2>声音克隆</h2>
-                  <p>上传本人或已授权声音样本，生成后剪辑和成品配音可直接选择。</p>
-                </div>
-              </div>
-              <div class="voice-form">
-                <label>声音名称</label>
-                <input id="voiceName" placeholder="例如：老板自然口播" />
-                <label>选择声音样本</label>
-                <select id="voiceSampleSelect"></select>
-                <label class="checkline">
-                  <input id="voiceConsent" type="checkbox" />
-                  我确认该声音为本人或已取得明确授权
-                </label>
-                <button id="createVoiceBtn" class="secondary">克隆声音档案</button>
-              </div>
-              <div class="voice-tip">
-                可直接选择带人声的口播视频，系统会自动提取前 45 秒并转换为合规音频；单独上传音频时建议使用 10-45 秒的清晰人声。
-              </div>
-              <div id="voiceList" class="voice-list"></div>
-            </aside>
-          </div>
-
-          <div id="assetGroupModal" class="library-modal hidden" aria-hidden="true">
-            <div class="library-modal-backdrop" data-close-asset-modal></div>
-            <div class="library-modal-card">
-              <div class="library-modal-head">
-                <div>
-                  <span class="eyebrow">当前视频库</span>
-                  <h3 id="assetModalTitle">未分组</h3>
-                  <p id="assetModalMeta">0 个素材 · 0 B</p>
-                </div>
-                <button class="icon-btn" type="button" data-close-asset-modal>×</button>
-              </div>
-              <div class="upload-panel in-modal">
-                <div class="upload-panel-head">
-                  <strong>添加素材</strong>
-                  <span id="assetUploadHint">素材会直接进入当前视频库。</span>
-                </div>
-                <div class="form-row">
-                  <div>
-                    <label>上传到哪个视频库</label>
-                    <select id="assetLibrarySelect"></select>
-                  </div>
-                  <div>
-                    <label>素材用途</label>
-                    <select id="assetType">
-                      <option value="talking_head">口播视频</option>
-                      <option value="scene">门店环境</option>
-                      <option value="process">项目过程</option>
-                      <option value="feedback">顾客反馈</option>
-                      <option value="product">产品/团购图</option>
-                      <option value="voice_sample">声音样本</option>
-                      <option value="bgm">BGM 音乐</option>
-                    </select>
-                  </div>
-                </div>
-                <label>素材文件</label>
-                <input id="assetFile" type="file" />
-                <button id="uploadAssetBtn" class="primary">上传到当前视频库</button>
-              </div>
-              <div class="library-modal-subhead">
-                <strong>素材管理</strong>
-                <span>在这里选择或删除素材，页面底部不再单独铺列表。</span>
-              </div>
-              <div id="assetList" class="library-modal-list"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="editorTab" class="tab">
-        <div class="workspace-grid one-column">
-          <div class="panel wide-panel">
-            <div class="panel-head">
-              <span class="num">剪</span>
-              <div>
-                <h2>剪辑</h2>
-                <p>把脚本里的文案和分镜导入，再给每个镜头匹配客户自建的视频库素材。</p>
-              </div>
-              <button id="oneClickEditBtn" class="primary panel-head-action" type="button">一键成品剪辑</button>
-            </div>
-            <div id="editorMaterialNotice" class="editor-notice hidden">
-              <div>
-                <strong>剪辑前先补齐视频库</strong>
-                <p id="editorMaterialNoticeText">当前缺少素材或声音，请先去视频库添加。</p>
-              </div>
-              <button id="editorGoLibraryBtn" class="secondary" type="button">去视频库添加素材 / 声音</button>
-            </div>
-            <div id="editProgressOverlay" class="edit-progress-overlay hidden" aria-live="polite">
-              <div class="edit-loader">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <div>
-                <h3>正在一键成品剪辑</h3>
-                <p id="editProgressText">正在生成克隆配音、匹配素材和合成成片，请保持页面打开。</p>
-                <div class="edit-progress-track"><i id="editProgressBar"></i></div>
-                <div id="editProgressSteps" class="edit-progress-steps">
-                  <em>生成配音</em>
-                  <em>匹配素材</em>
-                  <em>合成成片</em>
-                  <em>写入成品库</em>
-                </div>
-              </div>
-            </div>
-            <div class="button-row top-actions">
-              <button id="addShotBtn" class="secondary">手动添加镜头</button>
-              <button id="autoMatchBtn" class="secondary">从脚本分镜导入</button>
-            </div>
-            <div class="editor-quick-settings">
-              <div class="smart-title-card">
-                <span class="smart-title-icon">标</span>
-                <div>
-                  <p class="eyebrow">AI 标题判断</p>
-                  <h3 id="editorRecommendedTitleStyle">等待导入镜头</h3>
-                  <p id="editorTitleTemplateHint" class="field-hint title-template-hint">导入脚本后，系统会根据文案和分镜自动判断最适合的标题类型。</p>
-                </div>
-              </div>
-              <div class="editor-audio-bar">
-                <div>
-                  <label>克隆声音项目</label>
-                  <select id="editorVoiceSelect"></select>
-                </div>
-                <div>
-                  <label>BGM 设置</label>
-                  <select id="editorBgmMode">
-                    <option>智能推荐 BGM</option>
-                    <option>不用 BGM</option>
-                    <option>常用BGM-轻快种草</option>
-                    <option>常用BGM-温柔口播</option>
-                    <option>常用BGM-高级氛围</option>
-                    <option>常用BGM-同城生活</option>
-                    <option>常用BGM-团购促单</option>
-                    <option>常用BGM-舒缓信任</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="shot-table-wrap">
-              <table class="shot-table">
-                <colgroup>
-                  <col class="shot-col-index" />
-                  <col class="shot-col-copy" />
-                  <col class="shot-col-visual" />
-                  <col class="shot-col-material" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>镜头</th>
-                    <th>口播文案</th>
-                    <th>分镜画面</th>
-                    <th>视频库匹配</th>
-                  </tr>
-                </thead>
-                <tbody id="shotTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="exportTab" class="tab">
-        <div class="workspace-grid one-column">
-          <div class="panel wide-panel finished-library-panel">
-            <div class="panel-head">
-              <span class="num">4</span>
-              <div>
-                <h2>成品素材库</h2>
-                <p>这里像素材视频库一样保存成片效果，客户只需要预览、下载和复用。</p>
-              </div>
-              <button id="videoBtn" class="primary panel-head-action">生成演示成片</button>
-            </div>
-            <div class="export-control-row">
-              <div id="exportStatus" class="export-status is-idle">还没有生成成片</div>
-              <div class="finished-library-toolbar">
-                <label class="finished-select-all">
-                  <input id="selectAllFinishedJobs" type="checkbox">
-                  <span>全选成片</span>
-                </label>
-                <button id="migrateLegacyOutputsBtn" class="secondary" type="button">修复旧成片</button>
-                <button id="deleteFinishedSelectedBtn" class="secondary danger" type="button" disabled>删除选中</button>
-              </div>
-            </div>
-            <div id="latestExport" class="finished-video-grid"></div>
-            <details class="export-advanced">
-              <summary>高级生成设置</summary>
-              <div class="export-advanced-grid">
-                <div>
-                  <label>选择声音</label>
-                  <select id="ttsVoiceSelect"></select>
-                </div>
-                <div>
-                  <label>生成条数</label>
-                  <select id="renderCount">
-                    <option value="1">1 条</option>
-                    <option value="2">2 条</option>
-                    <option value="3">3 条</option>
-                    <option value="5">5 条</option>
-                  </select>
-                </div>
-                <div>
-                  <label>BGM 设置</label>
-                  <select id="bgmMode">
-                    <option>智能推荐 BGM</option>
-                    <option>不用 BGM</option>
-                    <option>常用BGM-轻快种草</option>
-                    <option>常用BGM-温柔口播</option>
-                    <option>常用BGM-高级氛围</option>
-                    <option>常用BGM-同城生活</option>
-                    <option>常用BGM-团购促单</option>
-                    <option>常用BGM-舒缓信任</option>
-                  </select>
-                </div>
-                <div>
-                  <label>标题样式</label>
-                  <select id="titleStyle">
-                    <option>智能推荐样式</option>
-                    <option>不要标题</option>
-                    <option>痛点钩子标题</option>
-                    <option>反差悬念标题</option>
-                    <option>数字清单标题</option>
-                    <option>同城场景标题</option>
-                    <option>避坑提醒标题</option>
-                    <option>结果承诺标题</option>
-                    <option>真实测评标题</option>
-                    <option>团购成交标题</option>
-                  </select>
-                  <p id="titleTemplateHint" class="field-hint title-template-hint"></p>
-                </div>
-                <div class="hidden">
-                  <select id="subtitleStyle">
-                    <option>玫红高亮字幕</option>
-                  </select>
-                </div>
-              </div>
-              <label>配音文本</label>
-              <textarea id="ttsText" rows="5" placeholder="脚本生成后会自动填入"></textarea>
-              <button id="ttsBtn" class="secondary">生成配音</button>
-              <label>视频标题</label>
-              <input id="videoTitle" placeholder="脚本标题会自动填入" />
-              <label>视频脚本</label>
-              <textarea id="videoScript" rows="5" placeholder="用于成片合成"></textarea>
-            </details>
-          </div>
-        </div>
-      </section>
-
-      <section id="accountTab" class="tab">
-        <div class="workspace-grid one-column">
-          <div class="panel wide-panel account-panel">
-            <div class="panel-head">
-              <span class="num">账</span>
-              <div>
-                <h2>账号设置</h2>
-                <p>管理员可以给客户设置手机号、密码、登录有效期和剪辑条数。</p>
-              </div>
-            </div>
-
-            <div id="accountSelfCard" class="account-self-card"></div>
-
-            <div id="accountAdminArea" class="account-admin-area hidden">
-              <div class="account-layout">
-                <div class="account-form">
-                  <h3>新建 / 修改账号</h3>
-                  <input id="accountEditingId" type="hidden" />
-                  <div class="form-row">
-                    <div>
-                      <label>账号名</label>
-                      <input id="accountUsername" placeholder="例如：client02" />
-                    </div>
-                    <div>
-                      <label>手机号</label>
-                      <input id="accountPhone" inputmode="tel" placeholder="客户手机号，用来登录" />
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div>
-                      <label>登录密码</label>
-                      <input id="accountPassword" type="password" placeholder="新账号必填；修改时留空则不改密码" />
-                    </div>
-                    <div>
-                      <label>登录有效期</label>
-                      <input id="accountExpiresAt" type="date" />
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div>
-                      <label>剪辑条数</label>
-                      <input id="accountClipQuota" type="number" min="0" step="1" value="20" />
-                    </div>
-                    <div>
-                      <label>每日生成额度</label>
-                      <input id="accountQuotaDaily" type="number" min="0" step="1" value="20" />
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div>
-                      <label>账号身份</label>
-                      <select id="accountRole">
-                        <option value="customer">客户</option>
-                        <option value="admin">管理员</option>
-                      </select>
-                    </div>
-                    <label class="account-check">
-                      <input id="accountDisabled" type="checkbox" />
-                      <span>暂停这个账号</span>
-                    </label>
-                  </div>
-                  <div class="button-row">
-                    <button id="saveAccountBtn" class="primary" type="button">保存账号</button>
-                    <button id="resetAccountFormBtn" class="ghost" type="button">清空</button>
-                  </div>
-                  <div id="accountError" class="error"></div>
-                </div>
-
-                <div class="account-list-panel">
-                  <div class="account-list-head">
-                    <h3>账号列表</h3>
-                    <button id="refreshAccountsBtn" class="ghost small" type="button">刷新</button>
-                  </div>
-                  <div id="accountList" class="account-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div id="finishedPreviewModal" class="finished-preview-modal hidden">
-    <div class="finished-preview-backdrop" data-close-finished-preview></div>
-    <div class="finished-preview-dialog">
-      <button class="modal-close" type="button" data-close-finished-preview>×</button>
-      <h3 id="finishedPreviewTitle">成片预览</h3>
-      <video id="finishedPreviewVideo" controls playsinline></video>
-    </div>
-  </div>
-
-  <div id="toast" class="toast hidden"></div>
-  <script src="config.js?v=20260728-secure-output"></script>
-  <script src="app.js?v=20260729-content-flow-v1"></script>
+  </main>
 </body>
 </html>
