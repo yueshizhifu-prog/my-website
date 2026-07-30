@@ -1926,7 +1926,7 @@ function cleanVisualLine(value = "") {
 
 function buildRenderShots() {
   ensureShots();
-  return normalizeList(state.shots)
+  const baseShots = normalizeList(state.shots)
     .map((shot, index) => {
       const text = cleanVoiceoverLine(shot.text);
       const visual = String(shot.visual || "").trim();
@@ -1938,6 +1938,72 @@ function buildRenderShots() {
       }, index);
     })
     .filter((shot) => shot.text);
+  const expanded = baseShots.flatMap((shot, sourceShotIndex) => (
+    splitTextForEditing(shot.text).map((text, phraseIndex) => normalizeShot({
+      ...shot,
+      text,
+      sourceShotIndex,
+      phraseIndex,
+      duration: estimateShotDuration(text, sourceShotIndex),
+    }, sourceShotIndex))
+  ));
+  while (expanded.length > 12) {
+    let mergeAt = 0;
+    let shortest = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < expanded.length - 1; index += 1) {
+      const sameSource = expanded[index].sourceShotIndex === expanded[index + 1].sourceShotIndex;
+      const score = Array.from(expanded[index].text + expanded[index + 1].text).length + (sameSource ? 0 : 1000);
+      if (score < shortest) {
+        shortest = score;
+        mergeAt = index;
+      }
+    }
+    const first = expanded[mergeAt];
+    const second = expanded[mergeAt + 1];
+    expanded.splice(mergeAt, 2, normalizeShot({
+      ...first,
+      text: `${first.text}${second.text}`,
+      duration: estimateShotDuration(`${first.text}${second.text}`, first.sourceShotIndex),
+    }, mergeAt));
+  }
+  return expanded;
+}
+
+function splitTextForEditing(value = "", targetLength = 13, maxLength = 18) {
+  const text = cleanVoiceoverLine(value);
+  if (!text) return [];
+  const sentenceParts = text.match(/[^，。！？；：,.!?;:]+[，。！？；：,.!?;:]*/g) || [text];
+  const output = [];
+  sentenceParts.forEach((sentence) => {
+    const cleanSentence = sentence.trim();
+    if (!cleanSentence) return;
+    if (Array.from(cleanSentence).length <= maxLength) {
+      output.push(cleanSentence);
+      return;
+    }
+    let words;
+    try {
+      words = Array.from(new Intl.Segmenter("zh-CN", { granularity: "word" }).segment(cleanSentence), (item) => item.segment);
+    } catch {
+      words = Array.from(cleanSentence);
+    }
+    let current = "";
+    words.forEach((word) => {
+      const next = `${current}${word}`;
+      if (current && Array.from(next).length > maxLength) {
+        output.push(current.trim());
+        current = word;
+      } else {
+        current = next;
+      }
+      if (Array.from(current).length >= targetLength && /[，。！？；：,.!?;:、\s]$/.test(current)) {
+        output.push(current.trim());
+        current = "";
+      }
+    });
+    if (current.trim()) output.push(current.trim());
+  });
+  return output.filter(Boolean);
 }
 
 function estimateShotDuration(text, index = 0) {
@@ -2993,6 +3059,8 @@ function isVisualLibraryAsset(asset = {}) {
 function buildMaterialMatchPlan(shots = buildRenderShots()) {
   const selectedIds = new Set(normalizeList(state.selectedLibraryAssetIds));
   const visualAssets = normalizeList(state.assets).filter(isVisualLibraryAsset);
+  const usage = new Map();
+  let previousAssetId = "";
   const matches = normalizeList(shots).map((shot, index) => {
     const libraryId = resolveShotLibraryId(shot.libraryId, shot);
     const libraryAssets = visualAssets.filter((asset) => getAssetLibraryId(asset) === libraryId);
@@ -3000,8 +3068,18 @@ function buildMaterialMatchPlan(shots = buildRenderShots()) {
     const candidates = selectedInLibrary.length ? selectedInLibrary : libraryAssets;
     const typedCandidates = candidates.filter((asset) => String(asset.type || "") === String(shot.materialType || ""));
     const pool = typedCandidates.length ? typedCandidates : candidates;
-    const asset = pool.length ? pool[index % pool.length] : null;
-    return { index, libraryId, assetId: asset?.id || "", assetName: asset?.name || "" };
+    const ranked = [...pool].sort((left, right) => {
+      const repeatPenaltyLeft = left.id === previousAssetId ? 100 : 0;
+      const repeatPenaltyRight = right.id === previousAssetId ? 100 : 0;
+      return (usage.get(left.id) || 0) + repeatPenaltyLeft - (usage.get(right.id) || 0) - repeatPenaltyRight;
+    });
+    const asset = ranked[0] || null;
+    const useIndex = asset ? (usage.get(asset.id) || 0) : 0;
+    if (asset) {
+      usage.set(asset.id, useIndex + 1);
+      previousAssetId = asset.id;
+    }
+    return { index, libraryId, assetId: asset?.id || "", assetName: asset?.name || "", assetUseIndex: useIndex };
   });
   return {
     matches,
@@ -3192,7 +3270,13 @@ async function generateVideo() {
   const recommendedTitleStyle = getRecommendedTitleStyle();
   setExportStatus("成片任务处理中：正在逐镜头生成同步配音和自动剪辑...", "running");
   const voiceId = requestedVoiceId;
-  const assetIds = [...materialPlan.assetIds];
+  const bgmMode = getControlValue("editorBgmMode", "bgmMode", "智能推荐 BGM");
+  const bgmAssets = normalizeList(state.assets).filter((asset) => String(asset.type || "").toLowerCase() === "bgm");
+  const bgmKeyword = String(bgmMode).replace(/^常用BGM-/, "").replace(/BGM/ig, "").trim();
+  const bgmAsset = bgmMode === "不用 BGM"
+    ? null
+    : (bgmAssets.find((asset) => bgmKeyword && String(asset.name || "").includes(bgmKeyword)) || bgmAssets[0] || null);
+  const assetIds = Array.from(new Set([...materialPlan.assetIds, bgmAsset?.id].filter(Boolean)));
   setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
     title,
@@ -3214,7 +3298,9 @@ async function generateVideo() {
       headline: title,
       showHeadline: recommendedTitleStyle !== "不要标题",
       segmentedVoiceover: true,
-      bgmMode: getControlValue("editorBgmMode", "bgmMode", "智能推荐 BGM"),
+      subtitleSource: "script",
+      bgmMode,
+      bgmAssetId: bgmAsset?.id || "",
       lipSyncMode,
     }
   };
