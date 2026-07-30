@@ -3276,6 +3276,9 @@ async function generateVideo() {
   const bgmAsset = bgmMode === "不用 BGM"
     ? null
     : (bgmAssets.find((asset) => bgmKeyword && String(asset.name || "").includes(bgmKeyword)) || bgmAssets[0] || null);
+  if (bgmMode !== "不用 BGM" && !bgmAsset) {
+    toast("当前视频库没有可用 BGM，本次成片将只保留配音。需要背景音乐，请先在视频库上传 BGM 音乐。");
+  }
   const assetIds = Array.from(new Set([...materialPlan.assetIds, bgmAsset?.id].filter(Boolean)));
   setExportStatus("成片合成中，请保持页面打开...", "running");
   const payload = {
