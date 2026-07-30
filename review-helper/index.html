@@ -31,6 +31,10 @@
       background: #2a0715;
     }
 
+    body.gate-pending .app {
+      display: none;
+    }
+
     body {
       min-height: 100vh;
       color: var(--ink);
@@ -447,6 +451,110 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    .qr-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background:
+        linear-gradient(180deg, rgba(42, 7, 21, .18), rgba(42, 7, 21, .86)),
+        url("assets/brand-bg.png") center center / cover no-repeat;
+    }
+
+    .qr-gate[hidden] {
+      display: none;
+    }
+
+    .qr-panel {
+      width: min(100%, 360px);
+      padding: 24px 20px 20px;
+      border-radius: 8px;
+      background: rgba(255, 250, 252, .96);
+      border: 1px solid rgba(255, 255, 255, .42);
+      box-shadow: 0 20px 52px rgba(24, 4, 12, .34);
+      text-align: center;
+    }
+
+    .qr-kicker {
+      color: #8f2d55;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .qr-title {
+      color: #25141b;
+      font-size: 25px;
+      line-height: 1.18;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .qr-desc {
+      color: #735c68;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    .qr-box {
+      width: 238px;
+      height: 238px;
+      margin: 0 auto 16px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #f1d6e2;
+      box-shadow: inset 0 0 0 1px rgba(183, 40, 104, .04);
+    }
+
+    .qr-box img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qr-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .qr-copy,
+    .qr-open {
+      min-height: 46px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .qr-copy {
+      background: linear-gradient(135deg, #b72868, #5a1027);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(100, 17, 46, .24);
+    }
+
+    .qr-open {
+      color: #6b2441;
+      background: #f8e8f0;
+    }
+
+    .qr-note {
+      margin-top: 12px;
+      color: #967481;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
     @media (min-width: 760px) {
       body {
         padding-top: 28px;
@@ -462,7 +570,7 @@
     }
   </style>
 </head>
-<body>
+<body class="gate-pending">
   <main class="app">
     <section class="hero" aria-labelledby="pageTitle">
       <div class="hero-body">
@@ -500,12 +608,30 @@
 
   <div class="toast" id="toast"></div>
 
+  <section class="qr-gate" id="qrGate" hidden aria-labelledby="qrGateTitle">
+    <div class="qr-panel">
+      <div class="qr-kicker">CUSTOMER ENTRY</div>
+      <h2 class="qr-title" id="qrGateTitle">让客户扫码生成好评</h2>
+      <p class="qr-desc">员工打开企业微信入口后，只展示这个二维码。客户用手机扫码后，再进入项目选择和好评生成页面。</p>
+      <div class="qr-box">
+        <img id="customerQrImage" src="" alt="客户扫码进入好评生成页二维码">
+      </div>
+      <div class="qr-actions">
+        <button class="qr-copy" id="copyCustomerLinkBtn" type="button">复制客户链接</button>
+        <a class="qr-open" id="openCustomerLink" href="#">本机打开客户页面</a>
+      </div>
+      <p class="qr-note">如果客户不方便扫码，可以把客户链接发给客户。</p>
+    </div>
+  </section>
+
   <script>
     const CONFIG = {
       brandName: "玥时之肤",
       maxServices: 2,
       maxRetries: 3,
       publicApiBaseUrl: "https://yueshi-review-vkvepxtngm.cn-shanghai.fcapp.run",
+      customerUrl: "https://yueshizhifu-prog.github.io/my-website/review-helper/?customer=1",
+      customerQrUrl: "assets/customer-review-qr.png",
       storageKey: "yueshi_review_state_v1",
       categories: [
         {
@@ -552,10 +678,16 @@
     const platforms = document.getElementById("platforms");
     const sourceNote = document.getElementById("sourceNote");
     const toast = document.getElementById("toast");
+    const qrGate = document.getElementById("qrGate");
+    const customerQrImage = document.getElementById("customerQrImage");
+    const copyCustomerLinkBtn = document.getElementById("copyCustomerLinkBtn");
+    const openCustomerLink = document.getElementById("openCustomerLink");
     let isGenerating = false;
     const hasLocalApiProxy = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
     const publicApiBaseUrl = String(CONFIG.publicApiBaseUrl || "").replace(/\/$/, "");
     const hasApiProxy = hasLocalApiProxy || Boolean(publicApiBaseUrl);
+    const entryParams = new URLSearchParams(window.location.search);
+    const isCustomerEntry = entryParams.get("customer") === "1" || entryParams.get("mode") === "customer";
 
     function escapeHtml(text) {
       return String(text).replace(/[&<>"']/g, char => ({
@@ -568,11 +700,24 @@
     }
 
     function init() {
+      if (!isCustomerEntry) {
+        renderQrGate();
+        return;
+      }
+      document.body.classList.remove("gate-pending");
       restoreState();
       renderServices();
       renderPlatforms();
       updateUI();
       bindEvents();
+    }
+
+    function renderQrGate() {
+      customerQrImage.src = CONFIG.customerQrUrl;
+      openCustomerLink.href = CONFIG.customerUrl;
+      qrGate.hidden = false;
+      copyCustomerLinkBtn.addEventListener("click", () => copyText(CONFIG.customerUrl, "客户链接已复制"));
+      document.body.classList.add("gate-pending");
     }
 
     function bindEvents() {
@@ -600,6 +745,21 @@
         copyReview(`文案已复制，去${platform.label}粘贴即可`);
         if (platform.url) window.open(platform.url, "_blank", "noopener");
       });
+    }
+
+    async function copyText(text, message) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(message);
+          return;
+        } catch (e) {}
+      }
+      if (copySync(text)) {
+        showToast(message);
+      } else {
+        showToast("请长按链接手动复制");
+      }
     }
 
     function renderServices() {
