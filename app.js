@@ -269,6 +269,13 @@ const apiErrorMessages = {
   voice_clone_requires_sample_asset: "请先选择声音样本。",
   voice_sample_asset_not_found: "声音样本不存在，请重新选择。",
   voice_sample_url_missing: "声音样本无法读取，请重新上传。",
+  voice_sample_extract_service_unavailable: "声音样本处理服务暂不可用，请稍后再试。",
+  voice_sample_extract_not_deployed: "声音样本处理服务尚未更新，暂时不能从视频提取声音。",
+  voice_sample_extract_failed: "无法从这个视频提取声音，请更换清晰口播视频或音频。",
+  voice_sample_has_no_audio: "这个视频没有可用声音，不能用于声音克隆。",
+  voice_sample_too_short: "有效人声不足 10 秒，请上传 10-45 秒的清晰连续人声。",
+  voice_sample_too_large: "声音样本超过 10MB，请上传 10-45 秒的清晰人声。",
+  voice_sample_format_invalid: "声音样本格式不支持，请上传 MP3、WAV、M4A，或选择带人声的视频。",
   asset_data_invalid: "自动配音文件无效，请重新生成。",
   asset_data_too_large: "自动配音文件过大，无法保存到云端。",
   tts_output_not_found: "刚生成的配音文件不存在，请重新生成后再剪辑。",
@@ -2597,7 +2604,7 @@ function renderAssetOptions() {
   if (select) {
     const selected = select.value;
     if (!voiceSampleAssets.length) {
-      select.innerHTML = `<option value="">先上传 45 秒以内声音样本、口播视频或音频素材</option>`;
+      select.innerHTML = `<option value="">先上传声音样本，或选择带人声的口播视频</option>`;
       return;
     }
     select.innerHTML = voiceSampleAssets
@@ -2611,8 +2618,17 @@ function renderAssetOptions() {
 
 function getVoiceCloneErrorMessage(error) {
   const message = String(error?.message || error || "");
+  if (/voice_sample_extract_not_deployed|处理服务尚未更新/i.test(message)) {
+    return "声音样本处理服务尚未更新，暂时不能从视频提取声音，请联系管理员更新剪辑服务器。";
+  }
+  if (/voice_sample_has_no_audio|没有可用声音/i.test(message)) {
+    return "这个视频没有可用声音，不能用于声音克隆。";
+  }
+  if (/voice_sample_too_short|不足 10 秒/i.test(message)) {
+    return "有效人声不足 10 秒，请上传 10-45 秒的清晰连续人声。";
+  }
   if (/file too large|too large|413/i.test(message)) {
-    return `声音样本太长或文件太大，请上传 ${voiceSampleMaxSeconds} 秒以内的清晰人声小音频`;
+    return `声音样本太长或文件太大，请上传 10-${voiceSampleMaxSeconds} 秒的清晰人声`;
   }
   if (/fetch failed|network|Failed to fetch/i.test(message)) {
     return "声音克隆接口连接失败，请稍后再试。";
@@ -2652,10 +2668,6 @@ async function createVoice() {
   const consent = $("voiceConsent").checked;
   const sampleAssetId = $("voiceSampleSelect").value;
   const sampleAsset = normalizeList(state.assets).find((asset) => asset.id === sampleAssetId);
-  if (sampleAsset?.duration && Number(sampleAsset.duration) > voiceSampleMaxSeconds) {
-    toast(`声音样本请控制在 ${voiceSampleMaxSeconds} 秒以内，当前约 ${Math.ceil(Number(sampleAsset.duration))} 秒`);
-    return;
-  }
   if (!sampleAssetId) {
     toast("先选择声音样本");
     return;
@@ -2663,7 +2675,11 @@ async function createVoice() {
   const btn = $("createVoiceBtn");
   const oldText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "声音克隆中...";
+  const sampleSource = `${sampleAsset?.name || ""} ${sampleAsset?.objectKey || ""}`.toLowerCase();
+  const needsExtraction = /\.(mp4|mov|m4v|webm|avi|mkv)(?:$|\?)/i.test(sampleSource)
+    || Number(sampleAsset?.size || 0) > 10 * 1024 * 1024
+    || Number(sampleAsset?.duration || 0) > voiceSampleMaxSeconds;
+  btn.textContent = needsExtraction ? "正在提取视频人声..." : "声音克隆中...";
   try {
     const data = await api("/api/voices/clone", {
       method: "POST",
