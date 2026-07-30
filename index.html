@@ -2,146 +2,64 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>玥时工具入口</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>玥时之肤好评助手</title>
+  <meta http-equiv="refresh" content="0; url=./review-helper/">
+  <script>
+    const target = "./review-helper/" + window.location.search + window.location.hash;
+    window.location.replace(target);
+  </script>
   <style>
-    :root {
-      color-scheme: light;
-      --bg: #2a0715;
-      --panel: #fff7fb;
-      --ink: #26131a;
-      --muted: #7a6570;
-      --line: rgba(106, 35, 66, .16);
-      --accent: #b72868;
-      --accent-dark: #64172f;
-    }
-
     * {
       box-sizing: border-box;
     }
 
     body {
-      margin: 0;
       min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-      color: var(--ink);
-      background:
-        linear-gradient(155deg, rgba(42, 7, 21, .92), rgba(183, 40, 104, .72)),
-        linear-gradient(180deg, #2a0715, #b72868);
+      margin: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(42, 7, 21, .22), rgba(42, 7, 21, .78)),
+        linear-gradient(155deg, #2a0715, #b72868);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      text-align: center;
       letter-spacing: 0;
     }
 
     main {
-      width: min(100%, 760px);
+      width: min(100%, 360px);
     }
 
     h1 {
-      margin: 0 0 8px;
-      color: white;
-      font-size: clamp(28px, 6vw, 48px);
-      line-height: 1.05;
-      font-weight: 800;
-    }
-
-    .sub {
-      margin: 0 0 22px;
-      color: rgba(255, 255, 255, .78);
-      font-size: 15px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    a {
-      display: block;
-      min-height: 156px;
-      padding: 22px;
-      border-radius: 8px;
-      background: var(--panel);
-      color: var(--ink);
-      text-decoration: none;
-      box-shadow: 0 18px 42px rgba(24, 6, 14, .26);
-      border: 1px solid var(--line);
-      transition: transform .18s ease, box-shadow .18s ease;
-    }
-
-    a:active {
-      transform: scale(.99);
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: rgba(183, 40, 104, .1);
-      color: var(--accent-dark);
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-
-    h2 {
-      margin: 0 0 8px;
+      margin: 0 0 12px;
       font-size: 24px;
-      line-height: 1.15;
+      line-height: 1.2;
     }
 
     p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.65;
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, .76);
+      font-size: 15px;
+      line-height: 1.7;
     }
 
-    .go {
-      margin-top: 18px;
-      color: var(--accent);
+    a {
+      color: #fff;
       font-weight: 800;
-    }
-
-    @media (max-width: 640px) {
-      body {
-        align-items: flex-start;
-        padding: 22px 14px;
-      }
-
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      a {
-        min-height: 142px;
-      }
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, .7);
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>玥时工具入口</h1>
-    <p class="sub">内部工具已分开放置，避免好评助手和 AI 剪视频互相覆盖。</p>
-    <div class="grid">
-      <a href="./review-helper/">
-        <span class="tag">门店好评</span>
-        <h2>好评助手</h2>
-        <p>选择体验项目，生成更自然真实的美团/点评好评文案。</p>
-        <div class="go">打开好评助手</div>
-      </a>
-      <a href="./ai-video/">
-        <span class="tag">短视频</span>
-        <h2>AI 剪视频</h2>
-        <p>调研定位、脚本分镜、素材管理、配音和一键剪辑流程。</p>
-        <div class="go">打开 AI 剪视频</div>
-      </a>
-    </div>
+    <h1>正在打开好评助手</h1>
+    <p>如果没有自动跳转，请点击下面按钮进入扫码页。</p>
+    <a href="./review-helper/">打开好评助手</a>
   </main>
 </body>
 </html>
