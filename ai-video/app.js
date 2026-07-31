@@ -258,6 +258,9 @@ const apiErrorMessages = {
   render_worker_invalid_response: "剪辑服务返回异常，请稍后再试。",
   render_worker_failed: "剪辑服务处理失败，请稍后再试。",
   render_worker_no_output: "剪辑服务没有返回有效成品，未保存任何伪成品，请稍后重试。",
+  render_queue_full: "当前等待剪辑的任务较多，请稍后再试。",
+  render_status_unavailable: "暂时无法读取剪辑进度，后台仍会继续处理，请稍后到成品库刷新查看。",
+  render_status_timeout: "剪辑任务仍在后台处理中，请稍后到成品库刷新查看。",
   api_not_found: "服务接口暂不可用，请稍后刷新页面再试。",
   server_error: "服务处理失败，请稍后再试。",
   missing_tts_text: "请先填写需要配音的文案。",
@@ -3223,6 +3226,95 @@ async function createVoiceoverAsset(text, voiceId) {
   return voiceAsset;
 }
 
+function waitForRenderPoll(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function updateAsyncEditProgress(stage, queuePosition = 0) {
+  if (editProgressTimer) {
+    clearInterval(editProgressTimer);
+    editProgressTimer = null;
+  }
+  const overlay = $("editProgressOverlay");
+  const bar = $("editProgressBar");
+  const text = $("editProgressText");
+  const steps = Array.from($("editProgressSteps")?.querySelectorAll("em") || []);
+  if (overlay) overlay.classList.remove("hidden");
+  const stageConfig = {
+    queued: {
+      value: 48,
+      active: 2,
+      message: queuePosition > 1
+        ? `任务已排队，前面还有 ${queuePosition - 1} 条，服务器会自动继续剪辑。`
+        : "任务已提交，剪辑服务器即将开始处理。",
+    },
+    rendering: { value: 78, active: 2, message: "剪辑服务器正在匹配素材、同步配音和合成字幕。" },
+    saving: { value: 94, active: 3, message: "视频已合成，正在安全写入成品库。" },
+  };
+  const config = stageConfig[stage] || stageConfig.queued;
+  if (bar) bar.style.width = `${config.value}%`;
+  if (text) text.textContent = config.message;
+  steps.forEach((step, index) => {
+    step.classList.toggle("done", index < config.active);
+    step.classList.toggle("active", index === config.active);
+  });
+}
+
+async function pollRenderJob(submittedJob) {
+  const statusUrl = String(submittedJob?.statusUrl || "").trim();
+  if (!statusUrl) throw new Error("render_status_unavailable");
+  const startedAt = Date.now();
+  let consecutiveFailures = 0;
+  let latestJob = submittedJob;
+  updateAsyncEditProgress("queued", Number(submittedJob.queuePosition || 1));
+
+  while (Date.now() - startedAt < 20 * 60 * 1000) {
+    await waitForRenderPoll(Date.now() - startedAt < 15000 ? 1800 : 3000);
+    try {
+      const response = await fetch(statusUrl, { cache: "no-store" });
+      if (!response.ok) throw new Error(`render_status_http_${response.status}`);
+      const status = await response.json();
+      consecutiveFailures = 0;
+      if (status?.job) {
+        latestJob = { ...latestJob, ...status.job };
+        state.lastRender = latestJob;
+        renderLatestExport();
+      }
+      const stage = String(status?.stage || latestJob?.stage || "").toLowerCase();
+      if (stage === "done" && latestJob?.status === "done" && latestJob?.outputUrl) {
+        updateAsyncEditProgress("saving");
+        return latestJob;
+      }
+      if (stage === "failed" || latestJob?.status === "failed") {
+        throw new Error(latestJob?.message || latestJob?.error || status?.message || "render_worker_failed");
+      }
+      updateAsyncEditProgress(stage === "rendering" ? "rendering" : "queued", Number(status?.queuePosition || latestJob?.queuePosition || 1));
+      setExportStatus(status?.message || (stage === "rendering" ? "服务器正在后台剪辑..." : "剪辑任务已排队，正在等待服务器处理..."), "running");
+    } catch (error) {
+      const raw = String(error?.message || "");
+      if (raw === "render_worker_failed" || raw in apiErrorMessages || /[\u4e00-\u9fff]/.test(raw)) throw error;
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= 5) throw new Error("render_status_unavailable");
+    }
+  }
+  throw new Error("render_status_timeout");
+}
+
+async function refreshCompletedRenderJob(job) {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      await loadJobs();
+      const saved = normalizeList(state.jobs).find((item) => item.id === job.id && item.status === "done");
+      if (saved) {
+        state.lastRender = saved;
+        return saved;
+      }
+    } catch {}
+    if (attempt < 4) await waitForRenderPoll(1200);
+  }
+  return job;
+}
+
 async function generateVideo() {
   if (staticPreviewMode) {
     setExportStatus(staticPreviewMessage, "error");
@@ -3280,7 +3372,7 @@ async function generateVideo() {
     toast("当前视频库没有可用 BGM，本次成片将只保留配音。需要背景音乐，请先在视频库上传 BGM 音乐。");
   }
   const assetIds = Array.from(new Set([...materialPlan.assetIds, bgmAsset?.id].filter(Boolean)));
-  setExportStatus("成片合成中，请保持页面打开...", "running");
+  setExportStatus("正在生成逐镜头配音并提交后台剪辑任务...", "running");
   const payload = {
     title,
     script: voiceoverText,
@@ -3311,16 +3403,25 @@ async function generateVideo() {
     method: "POST",
     body: JSON.stringify(payload),
   });
-  state.lastRender = data.job;
-  if (data.job?.quota && state.user) {
-    state.user.clipsUsed = Number(data.job.quota.clipsUsed || state.user.clipsUsed || 0);
-    state.user.clipQuota = Number(data.job.quota.clipQuota || state.user.clipQuota || 0);
+  let completedJob = data.job;
+  state.lastRender = completedJob;
+  renderLatestExport();
+  if (completedJob?.status === "processing") {
+    setExportStatus("剪辑任务已进入后台队列，可以切换页面，服务器会继续处理。", "running");
+    completedJob = await pollRenderJob(completedJob);
+    completedJob = await refreshCompletedRenderJob(completedJob);
+    state.lastRender = completedJob;
+  }
+  if (completedJob?.quota && state.user) {
+    state.user.clipsUsed = Number(completedJob.quota.clipsUsed || state.user.clipsUsed || 0);
+    state.user.clipQuota = Number(completedJob.quota.clipQuota || state.user.clipQuota || 0);
     renderAccountSettings();
   }
-  setExportStatus(data.job.status === "done" ? "成片已生成，可以下载" : "成片生成失败", data.job.status === "done" ? "done" : "error");
+  setExportStatus(completedJob?.status === "done" ? "成片已生成，可以下载" : "成片生成失败", completedJob?.status === "done" ? "done" : "error");
   renderLatestExport();
-  toast(data.job.status === "done" ? "视频已生成" : "视频生成失败");
-  return data.job.status === "done";
+  scheduleWorkspaceDraftSave();
+  toast(completedJob?.status === "done" ? "视频已生成并进入成品库" : "视频生成失败");
+  return completedJob?.status === "done";
   } catch (error) {
     const message = getVideoGenerateErrorMessage(error);
     setExportStatus(message, "error");
