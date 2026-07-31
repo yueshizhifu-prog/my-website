@@ -3472,10 +3472,20 @@ async function loadJobs() {
   state.selectedFinishedJobIds.forEach((id) => {
     if (!validIds.has(id)) state.selectedFinishedJobIds.delete(id);
   });
-  if (!state.lastRender && state.jobs.length) {
+  const lastRenderId = getFinishedJobId(state.lastRender);
+  const persistedLastRender = lastRenderId
+    ? state.jobs.find((job) => getFinishedJobId(job) === lastRenderId)
+    : null;
+  if (persistedLastRender && (
+    persistedLastRender.status !== state.lastRender?.status
+    || ["done", "failed"].includes(String(persistedLastRender.status || ""))
+  )) {
+    state.lastRender = persistedLastRender;
+  } else if (!state.lastRender && state.jobs.length) {
     state.lastRender = state.jobs[0];
   }
   renderLatestExport();
+  scheduleWorkspaceDraftSave();
 }
 
 function getFinishedJobId(job) {
