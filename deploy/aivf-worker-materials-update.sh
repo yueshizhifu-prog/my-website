@@ -336,7 +336,7 @@ function wrapCaption(value, columns = 14, maxLines = 2) {
 }
 
 function wrapBalancedTitle(value, maximumLength = 24) {
-  const units = textUnits(value).slice(0, maximumLength);
+  const units = Array.from(cleanText(value, 80)).slice(0, maximumLength);
   if (units.length <= 11) return units.join('');
   const target = units.length / 2;
   const candidates = [];
@@ -732,7 +732,7 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         name: 'AI Video Factory material render worker',
         mode: 'async-queue-script-phrase-audio-sync',
-        version: '2026-08-01-title-flow-v2',
+        version: '2026-08-01-title-flow-v3',
         queue: { running: renderQueueRunning, waiting: renderQueue.length, limit: renderQueueLimit },
         ffmpeg: true,
         font: pickFont(),
