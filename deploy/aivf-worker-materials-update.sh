@@ -349,7 +349,10 @@ function wrapBalancedTitle(value, maximumLength = 24) {
     candidates.push({ index, score });
   }
   candidates.sort((left, right) => left.score - right.score);
-  const splitAt = candidates[0]?.index || Math.ceil(target);
+  let splitAt = candidates[0]?.index || Math.ceil(target);
+  if (/^[，。！？；：、,.!?;:]$/.test(units[splitAt] || '') && units.length - splitAt > 5) {
+    splitAt += 1;
+  }
   return `${units.slice(0, splitAt).join('').trim()}\n${units.slice(splitAt).join('').trim()}`;
 }
 
@@ -729,7 +732,7 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         name: 'AI Video Factory material render worker',
         mode: 'async-queue-script-phrase-audio-sync',
-        version: '2026-08-01-title-flow-v1',
+        version: '2026-08-01-title-flow-v2',
         queue: { running: renderQueueRunning, waiting: renderQueue.length, limit: renderQueueLimit },
         ffmpeg: true,
         font: pickFont(),
