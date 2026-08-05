@@ -286,6 +286,7 @@ const apiErrorMessages = {
   tts_output_too_large: "配音文件过大，请缩短文案后再生成。",
   text_model_not_configured: "文案大模型还没有配置，请联系管理员。",
   text_model_unavailable: "文案大模型调用失败，请稍后再试。",
+  generated_research_incomplete: "AI 调研结果不完整，系统已自动重试，请稍后再生成一次。",
   missing_required_dossier_fields: "请先补全门店档案中的必填信息。",
   generated_content_inconsistent: "AI 生成的选题、文案和分镜没有完全对应，请重新生成一次。",
   tts_provider_failed: "阿里云语音接口调用失败，请检查语音模型和音色配置后重试。",
@@ -351,7 +352,8 @@ async function api(path, options = {}) {
     throw new Error(res.ok ? "后端返回为空，请稍后再试。" : `服务处理失败（${res.status}），请稍后再试。`);
   }
   if (!res.ok || data.ok === false) {
-    throw new Error(userFacingMessage(data.error || data.message, `请求失败（${res.status}），请稍后再试。`));
+    const errorSource = apiErrorMessages[data.error] ? data.error : (data.message || data.error);
+    throw new Error(userFacingMessage(errorSource, `请求失败（${res.status}），请稍后再试。`));
   }
   return data;
 }
