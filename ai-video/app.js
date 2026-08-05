@@ -1272,6 +1272,7 @@ async function generateResearch(autoJump = false) {
     return;
   }
   let success = false;
+  let failureMessage = "";
   $("resultStrategy").value = "";
   setResearchLoading(true, brief.modelMode);
   try {
@@ -1283,8 +1284,11 @@ async function generateResearch(autoJump = false) {
     success = true;
     toast(data.provider === "deepseek" ? "DeepSeek 已完成个人调研定位" : "已生成本地个人调研定位");
     if (autoJump) switchTab("scriptTab");
+  } catch (error) {
+    failureMessage = userFacingMessage(error?.message, "AI 调研生成失败，请稍后再试。");
+    throw new Error(failureMessage);
   } finally {
-    setResearchLoading(false, brief.modelMode, success);
+    setResearchLoading(false, brief.modelMode, success, failureMessage);
   }
 }
 
@@ -1343,7 +1347,7 @@ function setScriptLoading(isLoading, mode, success = true) {
   }
 }
 
-function setResearchLoading(isLoading, mode, success = true) {
+function setResearchLoading(isLoading, mode, success = true, failureMessage = "") {
   const line = $("researchLoading");
   const text = $("researchLoadingText");
   const btn = $("researchBtn");
@@ -1360,7 +1364,7 @@ function setResearchLoading(isLoading, mode, success = true) {
   if (isLoading) {
     startGenerationProgress("research", mode);
   } else {
-    finishGenerationProgress("research", success);
+    finishGenerationProgress("research", success, failureMessage);
   }
 }
 
@@ -1431,7 +1435,7 @@ function renderGenerationProgress(config, steps, value) {
   }
 }
 
-function finishGenerationProgress(type, success = true) {
+function finishGenerationProgress(type, success = true, failureMessage = "") {
   const config = generationProgressConfig[type];
   if (!config) return;
   clearGenerationProgress(type);
@@ -1444,7 +1448,7 @@ function finishGenerationProgress(type, success = true) {
   panel.classList.toggle("is-error", !success);
   if (bar) bar.style.width = success ? "100%" : "100%";
   if (percent) percent.textContent = success ? "100%" : "失败";
-  if (step) step.textContent = success ? config.doneText : config.errorText;
+  if (step) step.textContent = success ? config.doneText : (failureMessage || config.errorText);
   if (stepsBox) {
     [...stepsBox.querySelectorAll(".progress-step")].forEach((el) => {
       el.classList.toggle("done", success);
