@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI 视频工厂</title>
-  <link rel="stylesheet" href="styles.css?v=20260729-content-flow-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260807-mobile-option-1" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -26,6 +26,26 @@
   </div>
 
   <div id="appView" class="app hidden">
+    <header class="mobile-appbar" aria-label="手机端工作台导航">
+      <div class="mobile-appbar-row">
+        <strong>AI 视频工厂</strong>
+        <div class="mobile-appbar-actions">
+          <span id="mobileStepStatus">1/4 调研</span>
+          <button id="mobileMenuBtn" class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="mobileMoreMenu">更多</button>
+        </div>
+      </div>
+      <nav class="mobile-step-nav" aria-label="制作流程">
+        <button class="mobile-step active" type="button" data-mobile-tab="researchTab"><b>1</b><span>调研</span></button>
+        <button class="mobile-step" type="button" data-mobile-tab="scriptTab"><b>2</b><span>脚本</span></button>
+        <button class="mobile-step" type="button" data-mobile-tab="editorTab"><b>3</b><span>剪辑</span></button>
+        <button class="mobile-step" type="button" data-mobile-tab="exportTab"><b>4</b><span>成品</span></button>
+      </nav>
+      <div id="mobileMoreMenu" class="mobile-more-menu hidden">
+        <button type="button" data-mobile-tab="libraryTab">视频库与声音</button>
+        <button type="button" data-mobile-tab="accountTab">账号设置</button>
+        <button id="mobileLogoutBtn" type="button">退出登录</button>
+      </div>
+    </header>
     <aside class="sidebar" id="sidebar">
       <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="收起侧边栏" aria-expanded="true">‹</button>
       <div class="brand-block">
@@ -279,7 +299,7 @@
                 </div>
               </div>
             </div>
-            <label>选题方向</label>
+            <label class="desktop-topic-summary">选题方向</label>
             <textarea id="scriptTopicIdeas" rows="6" readonly placeholder="生成后会给出 3 个选题，每个选题都有独立且完全对应的文案和分镜。"></textarea>
             <input id="resultTitle" type="hidden" />
             <input id="resultTags" type="hidden" />
@@ -295,8 +315,8 @@
                 <h2>文案和分镜</h2>
                 <p>右侧只放生成后的可执行内容，方便复制、调整和导入剪辑。</p>
               </div>
-              <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="选用选题"></div>
             </div>
+            <div id="topicChoiceBar" class="topic-choice-bar hidden" aria-label="选用选题"></div>
             <div id="scriptProgressPanel" class="generation-progress hidden" aria-live="polite">
               <div class="progress-head">
                 <span id="scriptProgressStep">正在整理调研档案</span>
@@ -449,7 +469,7 @@
               </div>
               <div>
                 <h3>正在一键成品剪辑</h3>
-                <p id="editProgressText">正在生成克隆配音、匹配素材和合成成片，请保持页面打开。</p>
+                <p id="editProgressText">正在生成克隆配音并提交后台任务，切换页面不会中断剪辑。</p>
                 <div class="edit-progress-track"><i id="editProgressBar"></i></div>
                 <div id="editProgressSteps" class="edit-progress-steps">
                   <em>生成配音</em>
@@ -682,6 +702,10 @@
         </div>
       </section>
     </main>
+    <footer id="mobileActionDock" class="mobile-action-dock">
+      <button id="mobilePrimaryAction" class="mobile-primary-action" type="button">生成个人调研</button>
+      <button id="mobileSecondaryAction" class="mobile-secondary-action" type="button">更多</button>
+    </footer>
   </div>
 
   <div id="finishedPreviewModal" class="finished-preview-modal hidden">
@@ -695,6 +719,6 @@
 
   <div id="toast" class="toast hidden"></div>
   <script src="config.js?v=20260728-secure-output"></script>
-  <script src="app.js?v=20260729-content-flow-v1"></script>
+  <script src="app.js?v=20260807-mobile-option-1"></script>
 </body>
 </html>
