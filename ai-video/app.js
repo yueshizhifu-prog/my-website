@@ -1314,6 +1314,7 @@ async function generateScript() {
     return;
   }
   let success = false;
+  let failureMessage = "";
   $("scriptBtn").classList.add("is-loading");
   $("scriptBtn").textContent = "正在生成文案 + 分镜...";
   setScriptLoading(true, payload.modelMode);
@@ -1326,14 +1327,17 @@ async function generateScript() {
     success = true;
     toast(`${state.activeTemplateCategory} 已生成`);
     switchTab("scriptTab");
+  } catch (error) {
+    failureMessage = userFacingMessage(error?.message, "文案和分镜生成失败，请稍后再试。");
+    throw new Error(failureMessage);
   } finally {
     $("scriptBtn").classList.remove("is-loading");
     $("scriptBtn").textContent = "用 DeepSeek 生成文案 + 分镜";
-    setScriptLoading(false, payload.modelMode, success);
+    setScriptLoading(false, payload.modelMode, success, failureMessage);
   }
 }
 
-function setScriptLoading(isLoading, mode, success = true) {
+function setScriptLoading(isLoading, mode, success = true, failureMessage = "") {
   const line = $("scriptLoading");
   const text = $("scriptLoadingText");
   line?.classList.toggle("hidden", !isLoading);
@@ -1345,7 +1349,7 @@ function setScriptLoading(isLoading, mode, success = true) {
   if (isLoading) {
     startGenerationProgress("script", mode);
   } else {
-    finishGenerationProgress("script", success);
+    finishGenerationProgress("script", success, failureMessage);
   }
 }
 
