@@ -629,6 +629,10 @@
       brandName: "玥时之肤",
       maxServices: 2,
       maxRetries: 3,
+      maxReviewHistory: 30,
+      maxAutoRegenerate: 3,
+      historyRetentionMs: 30 * 24 * 60 * 60 * 1000,
+      similarityThreshold: 0.42,
       publicApiBaseUrl: "https://yueshi-review-vkvepxtngm.cn-shanghai.fcapp.run",
       customerUrl: "https://yueshizhifu-prog.github.io/my-website/review-helper/?customer=1",
       customerQrUrl: "assets/customer-review-qr.png",
@@ -805,7 +809,6 @@
       state.result = "";
       state.source = "local";
       state.retryUsed = 0;
-      state.reviewHistory = [];
       state.variationCounter = 0;
       saveState();
       updateUI();
@@ -857,7 +860,7 @@
 
       try {
         if (hasApiProxy) {
-          const generated = await requestDeepSeekReview(mode, createReviewVariation());
+          const generated = await requestUniqueDeepSeekReview(mode);
           state.result = generated.review;
           state.source = "deepseek";
           rememberReview(generated.review);
@@ -882,7 +885,18 @@
       }
     }
 
-    async function requestDeepSeekReview(mode, variation) {
+    async function requestUniqueDeepSeekReview(mode) {
+      const maxAttempts = Math.max(1, Number(CONFIG.maxAutoRegenerate || 1));
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const generated = await requestDeepSeekReview(mode, createReviewVariation(attempt), attempt);
+        const similar = findSimilarReview(generated.review, getReviewHistory(mode));
+        if (!similar) return generated;
+        console.warn("Generated review is too similar, retrying.", { attempt: attempt + 1, similar });
+      }
+      throw new Error("Generated review too similar to recent history");
+    }
+
+    async function requestDeepSeekReview(mode, variation, attempt = 0) {
       const response = await fetch(getApiUrl("/api/generate-review"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -891,6 +905,9 @@
           selected: state.selected,
           previousReview: mode === "retry" ? state.result : "",
           reviewHistory: getReviewHistory(mode),
+          avoidPhrases: buildAvoidPhrases(),
+          strictNoRepeat: true,
+          attempt,
           variationSeed: variation.seed,
           variationProfile: variation.profile,
           mode
@@ -907,10 +924,10 @@
       return payload;
     }
 
-    function createReviewVariation() {
+    function createReviewVariation(attempt = 0) {
       const counter = Number(state.variationCounter || 0) + 1;
       state.variationCounter = counter;
-      const base = `${Date.now()}-${counter}-${state.selected.join("|")}`;
+      const base = `${Date.now()}-${counter}-${attempt}-${state.selected.join("|")}`;
       let score = 0;
       for (let i = 0; i < base.length; i += 1) score += base.charCodeAt(i);
       const profile = CONFIG.reviewVariations[score % CONFIG.reviewVariations.length];
@@ -923,12 +940,64 @@
     function getReviewHistory(mode) {
       const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
       const current = mode === "retry" && state.result ? [state.result] : [];
-      return [...history, ...current].slice(-6);
+      return [...history, ...current].slice(-CONFIG.maxReviewHistory);
     }
 
     function rememberReview(review) {
       const history = Array.isArray(state.reviewHistory) ? state.reviewHistory.filter(Boolean) : [];
-      state.reviewHistory = [...history, review].slice(-6);
+      const normalized = normalizeReviewText(review);
+      const uniqueHistory = history.filter(item => normalizeReviewText(item) !== normalized);
+      state.reviewHistory = [...uniqueHistory, review].slice(-CONFIG.maxReviewHistory);
+    }
+
+    function buildAvoidPhrases() {
+      return getReviewHistory("generate")
+        .flatMap(text => {
+          const normalized = normalizeReviewText(text);
+          return [
+            normalized.slice(0, 12),
+            normalized.slice(-12)
+          ].filter(item => item.length >= 6);
+        })
+        .slice(-24);
+    }
+
+    function findSimilarReview(review, history) {
+      const current = normalizeReviewText(review);
+      if (current.length < 18) return null;
+      for (const item of history || []) {
+        const previous = normalizeReviewText(item);
+        if (!previous || previous === current) return item || null;
+        if (current.slice(0, 12) && current.slice(0, 12) === previous.slice(0, 12)) return item;
+        if (textSimilarity(current, previous) >= CONFIG.similarityThreshold) return item;
+      }
+      return null;
+    }
+
+    function normalizeReviewText(text) {
+      return String(text || "")
+        .replace(/[\s"'“”‘’.,，。！？!?:：;；、~～…—\-_/\\()[\]{}<>《》|]/g, "")
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+        .toLowerCase();
+    }
+
+    function textSimilarity(a, b) {
+      const left = getShingles(a, 4);
+      const right = getShingles(b, 4);
+      if (!left.size || !right.size) return 0;
+      let intersection = 0;
+      left.forEach(token => {
+        if (right.has(token)) intersection += 1;
+      });
+      return intersection / Math.min(left.size, right.size);
+    }
+
+    function getShingles(text, size) {
+      const result = new Set();
+      for (let i = 0; i <= text.length - size; i += 1) {
+        result.add(text.slice(i, i + size));
+      }
+      return result;
     }
 
     function getApiUrl(path) {
@@ -1042,7 +1111,7 @@
         const raw = localStorage.getItem(CONFIG.storageKey);
         if (!raw) return;
         const saved = JSON.parse(raw);
-        if (!saved.ts || Date.now() - saved.ts > 24 * 60 * 60 * 1000) return;
+        if (!saved.ts || Date.now() - saved.ts > CONFIG.historyRetentionMs) return;
         const validServices = new Set(CONFIG.categories.flatMap(cat => cat.items));
         const serviceAliases = new Map([
           ["春水光｜抗敏感修护", "春水光｜强韧抗敏"],
@@ -1059,7 +1128,7 @@
         state.source = saved.source === "deepseek" && state.result ? saved.source : "local";
         if (state.source !== "deepseek") state.result = "";
         state.retryUsed = Number(saved.retryUsed || 0);
-        state.reviewHistory = Array.isArray(saved.reviewHistory) ? saved.reviewHistory.filter(Boolean).slice(-6) : [];
+        state.reviewHistory = Array.isArray(saved.reviewHistory) ? saved.reviewHistory.filter(Boolean).slice(-CONFIG.maxReviewHistory) : [];
         state.variationCounter = Number(saved.variationCounter || 0);
       } catch (e) {}
     }
