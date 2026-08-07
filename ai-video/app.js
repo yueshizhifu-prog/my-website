@@ -1767,6 +1767,14 @@ function formatPromptRows(rows) {
   )).join("\n");
 }
 
+function hasScriptResultPayload(result = {}, taskType = "") {
+  if (taskType === "research" || result.taskType === "research") return false;
+  if (taskType === "script" || result.taskType === "script") return true;
+  if (String(result.script || "").trim()) return true;
+  if (Array.isArray(result.topicOptions) && result.topicOptions.length > 0) return true;
+  return Array.isArray(result.shotPrompts) && result.shotPrompts.length > 0;
+}
+
 function applyAiResult(data, taskType = "") {
   const r = data.result || {};
   if (taskType === "research" || r.taskType === "research") state.lastResearch = r;
@@ -1781,7 +1789,7 @@ function applyAiResult(data, taskType = "") {
   if (taskType === "research" || r.taskType === "research" || !$("resultStrategy").value.trim()) {
     $("resultStrategy").value = r.strategy || "";
   }
-  if (taskType === "script" || r.taskType === "script" || r.script || r.shotPrompts) {
+  if (hasScriptResultPayload(r, taskType)) {
     state.scriptTopicOptions = normalizeTopicOptions(r);
     state.selectedTopicIndex = 0;
     renderTopicIdeas(state.scriptTopicOptions);
