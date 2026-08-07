@@ -144,6 +144,13 @@ const workspaceCopy = {
   }
 };
 
+const mobileStepMeta = [
+  { tabId: "researchTab", label: "调研", actionLabel: "生成个人调研", actionId: "researchBtn" },
+  { tabId: "scriptTab", label: "脚本", actionLabel: "生成文案和分镜", actionId: "scriptBtn" },
+  { tabId: "editorTab", label: "剪辑", actionLabel: "一键成品剪辑", actionId: "oneClickEditBtn" },
+  { tabId: "exportTab", label: "成品", actionLabel: "刷新成品库", actionId: "" },
+];
+
 const templateLibrary = {
   "流量短视频": [
     {
@@ -543,6 +550,7 @@ function showApp() {
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   applySidebarState();
+  updateMobileShell(document.querySelector(".tab.active")?.id || "researchTab");
 }
 
 function showLogin() {
@@ -856,6 +864,8 @@ function switchTab(tabId) {
   if (tabId === "accountTab") {
     loadAccounts().catch((e) => toast(e.message));
   }
+  updateMobileShell(tabId);
+  if (window.matchMedia("(max-width: 760px)").matches) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   renderCockpit();
 }
 
@@ -863,6 +873,76 @@ function updateWorkspaceHeader(tabId) {
   const copy = workspaceCopy[tabId] || workspaceCopy.researchTab;
   if ($("workspaceTitle")) $("workspaceTitle").textContent = copy.title;
   if ($("workspaceSubtitle")) $("workspaceSubtitle").textContent = copy.subtitle;
+}
+
+function setMobileMenu(open) {
+  const menu = $("mobileMoreMenu");
+  const trigger = $("mobileMenuBtn");
+  if (!menu || !trigger) return;
+  menu.classList.toggle("hidden", !open);
+  trigger.setAttribute("aria-expanded", String(open));
+}
+
+function getMobilePrimaryConfig(tabId) {
+  if (tabId === "scriptTab" && state.scriptTopicOptions.length && $("resultScript")?.value.trim()) {
+    return { label: "导入剪辑镜头", actionId: "splitShotBtn" };
+  }
+  if (tabId === "libraryTab") return { label: "新增视频库", actionId: "createAssetGroupBtn" };
+  if (tabId === "accountTab") return { label: "保存账号", actionId: "saveAccountBtn" };
+  const step = mobileStepMeta.find((item) => item.tabId === tabId) || mobileStepMeta[0];
+  return { label: step.actionLabel, actionId: step.actionId };
+}
+
+function updateMobileShell(tabId = "researchTab") {
+  const stepIndex = mobileStepMeta.findIndex((item) => item.tabId === tabId);
+  const status = $("mobileStepStatus");
+  if (status) {
+    if (stepIndex >= 0) status.textContent = `${stepIndex + 1}/4 ${mobileStepMeta[stepIndex].label}`;
+    else status.textContent = tabId === "libraryTab" ? "视频库" : "账号设置";
+  }
+  document.querySelectorAll("[data-mobile-tab]").forEach((button) => {
+    const currentIndex = mobileStepMeta.findIndex((item) => item.tabId === button.dataset.mobileTab);
+    button.classList.toggle("active", button.dataset.mobileTab === tabId);
+    button.classList.toggle("completed", stepIndex > 0 && currentIndex >= 0 && currentIndex < stepIndex);
+  });
+  const accountEntry = document.querySelector('[data-mobile-tab="accountTab"]');
+  if (accountEntry) accountEntry.classList.toggle("hidden", state.user?.role !== "admin");
+  const action = getMobilePrimaryConfig(tabId);
+  if ($("mobilePrimaryAction")) {
+    $("mobilePrimaryAction").textContent = action.label;
+    $("mobilePrimaryAction").dataset.actionId = action.actionId || "";
+    $("mobilePrimaryAction").dataset.activeTab = tabId;
+  }
+  setMobileMenu(false);
+}
+
+function runMobilePrimaryAction() {
+  const button = $("mobilePrimaryAction");
+  if (!button) return;
+  if (button.dataset.activeTab === "exportTab") {
+    loadJobs().catch((e) => toast(e.message));
+    return;
+  }
+  const target = $(button.dataset.actionId);
+  if (target) target.click();
+}
+
+function bindMobileShell() {
+  document.querySelectorAll("[data-mobile-tab]").forEach((button) => {
+    button.addEventListener("click", () => switchTab(button.dataset.mobileTab));
+  });
+  $("mobileMenuBtn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setMobileMenu($("mobileMoreMenu")?.classList.contains("hidden"));
+  });
+  $("mobileSecondaryAction")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setMobileMenu($("mobileMoreMenu")?.classList.contains("hidden"));
+  });
+  $("mobilePrimaryAction")?.addEventListener("click", runMobilePrimaryAction);
+  $("mobileLogoutBtn")?.addEventListener("click", () => $("logoutBtn")?.click());
+  $("mobileMoreMenu")?.addEventListener("click", (event) => event.stopPropagation());
+  document.addEventListener("click", () => setMobileMenu(false));
 }
 
 function bindTabs() {
@@ -1699,18 +1779,26 @@ function renderTopicChoiceBar() {
   const bar = $("topicChoiceBar");
   if (!bar) return;
   const options = state.scriptTopicOptions || [];
+  $("scriptTab")?.classList.toggle("has-generated-topics", Boolean(options.length));
   bar.classList.toggle("hidden", !options.length);
   if (!options.length) {
     bar.innerHTML = "";
+    updateMobileShell(document.querySelector(".tab.active")?.id || "scriptTab");
     return;
   }
-  bar.innerHTML = `<span>选用</span>${options.map((_, index) => {
+  bar.innerHTML = `<div class="topic-choice-heading"><strong>选择一个选题</strong><span>文案和分镜会严格对应当前选择</span></div>${options.map((option, index) => {
     const label = topicNumberLabels[index] || index + 1;
-    return `<button type="button" class="topic-choice ${index === state.selectedTopicIndex ? "active" : ""}" data-topic-index="${index}">选题${label}</button>`;
+    const active = index === state.selectedTopicIndex;
+    return `<label class="topic-choice ${active ? "active" : ""}">
+      <span class="topic-choice-index">${index + 1}</span>
+      <span class="topic-choice-copy"><strong>${escapeHtml(option.title || `选题${label}`)}</strong><em>${escapeHtml(cleanTopicReason(option.reason) || "点击选用这个方向")}</em></span>
+      <input class="topic-choice-indicator" type="radio" name="scriptTopicChoice" data-topic-index="${index}" ${active ? "checked" : ""} aria-label="选用选题${label}" />
+    </label>`;
   }).join("")}`;
   bar.querySelectorAll("[data-topic-index]").forEach((btn) => {
     btn.addEventListener("click", () => applySelectedTopic(Number(btn.dataset.topicIndex)));
   });
+  updateMobileShell(document.querySelector(".tab.active")?.id || "scriptTab");
 }
 
 function applySelectedTopic(index = 0, options = {}) {
@@ -3555,6 +3643,10 @@ function renderLatestExport() {
   const container = $("latestExport");
   if (!container) return;
   const jobs = getFinishedJobs();
+  const status = $("exportStatus");
+  if (jobs.length && status && (status.classList.contains("is-idle") || status.textContent.trim() === "还没有生成成片")) {
+    setExportStatus(`已加载 ${jobs.length} 条成片`, "done");
+  }
   updateFinishedToolbar(jobs);
   container.classList.toggle("is-empty", !jobs.length);
   if (!jobs.length) {
@@ -3922,5 +4014,6 @@ function bindActions() {
 }
 
 bindTabs();
+bindMobileShell();
 bindActions();
 restoreSession();
